@@ -1,0 +1,971 @@
+:root {
+  --bg: #14171c;
+  --panel: #1c2129;
+  --panel-2: #242b35;
+  --text: #e7ecf3;
+  --muted: #8b96a5;
+  --line: #333d4a;
+  --accent: #f2a04d;
+  --accent-2: #4dd0e1;
+  --node: #3a4653;
+  --node-in-scale: #4dd0e1;
+  --node-root: #f2a04d;
+  /* Chord-tone highlight colours, by interval role. */
+  --tone-root: #f2a04d;
+  --tone-3: #6db8ff;
+  --tone-5: #7cd992;
+  --tone-7: #d98cff;
+  /* Two-chord improv view colours. */
+  --improv-a: #f2a04d;
+  --improv-b: #4dd0e1;
+  --improv-shared: #c07bff;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+#app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+#app-header h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 0.5px;
+}
+#app-header .tagline {
+  margin: 2px 0 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ---- Fretboard ---- */
+#fretboard-panel {
+  background: linear-gradient(180deg, #2a2018, #1f1913);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  overflow-x: hidden;
+}
+
+/* Scale the whole neck to the panel width (via the SVG viewBox) so all frets
+   are always visible without a horizontal scrollbar. */
+svg.fretboard {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.fret-wire {
+  stroke: #5a6472;
+  stroke-width: 2;
+}
+.nut {
+  stroke: #d8dee7;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.string {
+  stroke: #b9c0cb;
+}
+.inlay {
+  fill: #6b7688;
+  opacity: 0.5;
+}
+.fret-number {
+  fill: var(--muted);
+  font-size: 11px;
+  text-anchor: middle;
+}
+
+.note {
+  cursor: pointer;
+  outline: none;
+}
+.note.hidden {
+  display: none;
+}
+.fret-node {
+  fill: var(--node);
+  stroke: #5b6675;
+  stroke-width: 1;
+  transition: transform 0.12s ease, fill 0.12s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.note-label {
+  fill: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  user-select: none;
+}
+.note.in-scale .fret-node {
+  fill: var(--node-in-scale);
+  stroke: #2aa5b5;
+}
+.note.in-scale .note-label {
+  fill: #06232a;
+}
+.note.root .fret-node {
+  fill: var(--node-root);
+  stroke: #c67f2f;
+}
+.note.root .note-label {
+  fill: #2b1a05;
+}
+.note.chord .fret-node {
+  fill: #7cd992;
+  stroke: #47a862;
+}
+.note.chord .note-label {
+  fill: #0c2413;
+}
+/* Chord-tone highlight: colour each node by its interval role. */
+.note.tone-root .fret-node {
+  fill: var(--tone-root);
+  stroke: #c67f2f;
+}
+.note.tone-3 .fret-node {
+  fill: var(--tone-3);
+  stroke: #2f7ec6;
+}
+.note.tone-5 .fret-node {
+  fill: var(--tone-5);
+  stroke: #47a862;
+}
+.note.tone-7 .fret-node {
+  fill: var(--tone-7);
+  stroke: #a355c6;
+}
+.note.tone-root .note-label,
+.note.tone-3 .note-label,
+.note.tone-5 .note-label,
+.note.tone-7 .note-label {
+  fill: #10161f;
+}
+/* Two-chord improv: chord A / chord B / shared tones, dim scale background. */
+.note.improv-a .fret-node {
+  fill: var(--improv-a);
+  stroke: #c67f2f;
+}
+.note.improv-b .fret-node {
+  fill: var(--improv-b);
+  stroke: #2aa5b5;
+}
+.note.improv-shared .fret-node {
+  fill: var(--improv-shared);
+  stroke: #8a4fd0;
+}
+.note.improv-a .note-label,
+.note.improv-b .note-label,
+.note.improv-shared .note-label {
+  fill: #10161f;
+}
+.note.improv-scale,
+.note.chord-scale {
+  opacity: 0.4;
+}
+.note.improv-scale .fret-node,
+.note.chord-scale .fret-node {
+  fill: var(--node);
+  stroke: #4a5563;
+}
+/* Root of either chord gets a bright ring on top of its fill. */
+.note.improv-root .fret-node {
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+/* Practice pattern: ring the note the position starts on. */
+.note.pattern-start .fret-node {
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+.note:hover .fret-node {
+  filter: brightness(1.2);
+}
+.note:focus-visible .fret-node {
+  stroke: #fff;
+  stroke-width: 2;
+}
+.note.active .fret-node {
+  transform: scale(1.25);
+  fill: #ffffff;
+}
+
+/* ---- Controls ---- */
+#controls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Tab bar: one practice mode (Tempo / Chord Trainer / Display) at a time. */
+.tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tab {
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+.tab:hover {
+  color: var(--text);
+  border-color: var(--accent-2);
+}
+.tab.active {
+  color: #05242a;
+  background: var(--accent-2);
+  border-color: transparent;
+}
+.tab-panel {
+  width: 100%;
+}
+.group {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  flex: 1 1 auto;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.field-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+
+.btn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.btn:hover {
+  border-color: var(--accent-2);
+}
+.btn.primary {
+  background: var(--accent-2);
+  color: #05242a;
+  border-color: transparent;
+  min-width: 92px;
+}
+.btn.primary.is-running {
+  background: var(--accent);
+  color: #2b1a05;
+}
+.btn.flash {
+  border-color: var(--accent);
+  background: #3a2f22;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  border-color: var(--line);
+}
+
+.select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.bpm-slider {
+  width: 220px;
+  accent-color: var(--accent-2);
+}
+/* Tempo stepper: − [ number ] + */
+.bpm-stepper {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.btn.step {
+  min-width: 40px;
+  padding: 0 12px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+.bpm-input {
+  width: 72px;
+  background: var(--panel-2);
+  color: var(--accent-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.beat-dots {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.beat-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--node);
+  border: 1px solid var(--line);
+  transition: transform 0.06s ease, background 0.06s ease;
+}
+.beat-dot.accent {
+  border-color: var(--accent);
+}
+.beat-dot.lit {
+  background: var(--accent-2);
+  transform: scale(1.25);
+}
+.beat-dot.accent.lit {
+  background: var(--accent);
+}
+
+.scale-fields {
+  display: flex;
+  gap: 14px;
+}
+.scale-fields.hidden {
+  display: none;
+}
+
+.chord-legend {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+.chord-legend .swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+.chord-legend .swatch::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--node);
+}
+.chord-legend .swatch.tone-root::before { background: var(--tone-root); }
+.chord-legend .swatch.tone-3::before { background: var(--tone-3); }
+.chord-legend .swatch.tone-5::before { background: var(--tone-5); }
+.chord-legend .swatch.tone-7::before { background: var(--tone-7); }
+.chord-legend .swatch.improv-a::before { background: var(--improv-a); }
+.chord-legend .swatch.improv-b::before { background: var(--improv-b); }
+.chord-legend .swatch.improv-shared::before { background: var(--improv-shared); }
+.chord-legend .swatch.improv-scale::before { background: var(--node); opacity: 0.55; }
+
+/* Two-chord improv controls. */
+.improv-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-basis: 100%;
+}
+.improv-fields.hidden {
+  display: none;
+}
+.improv-chord {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+}
+.improv-tag {
+  align-self: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 6px;
+}
+.improv-tag.tag-a { background: var(--improv-a); color: #2b1a05; }
+.improv-tag.tag-b { background: var(--improv-b); color: #06232a; }
+
+.hidden {
+  display: none !important;
+}
+
+/* ---- Chord trainer panel ---- */
+#chord-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+.chord-trainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+.chord-hint {
+  color: var(--muted);
+  text-align: center;
+  font-size: 14px;
+  padding: 12px;
+}
+.chord-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.slot-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.chord-slot.now .slot-label {
+  color: var(--accent-2);
+}
+.chord-slot.next {
+  opacity: 0.72;
+}
+.chord-name {
+  font-size: 20px;
+  font-weight: 700;
+}
+.chord-slot.now .chord-name {
+  font-size: 26px;
+  color: var(--accent-2);
+}
+.diagram-holder.playable {
+  cursor: pointer;
+}
+.diagram-holder.playable:hover {
+  filter: brightness(1.15);
+}
+
+.chord-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+.chord-center .arrow {
+  font-size: 30px;
+  color: var(--muted);
+}
+.countdown {
+  font-size: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.chord-trainer.changing .countdown {
+  color: var(--accent);
+  font-weight: 700;
+}
+.pips {
+  display: flex;
+  gap: 5px;
+}
+.pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--node);
+  border: 1px solid var(--line);
+}
+.pip.done {
+  background: var(--accent-2);
+}
+.pip.active {
+  background: var(--accent);
+  transform: scale(1.2);
+}
+
+/* ---- Chord diagram SVG ---- */
+.cd-fret,
+.cd-string {
+  stroke: #9aa4b2;
+  stroke-width: 1.2;
+}
+.cd-nut {
+  stroke: #e7ecf3;
+  stroke-width: 3.5;
+}
+.cd-dot {
+  fill: var(--accent-2);
+}
+.chord-slot.next .cd-dot {
+  fill: #8b96a5;
+}
+.cd-finger {
+  fill: #05242a;
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.cd-mark {
+  fill: var(--muted);
+  font-size: 12px;
+  text-anchor: middle;
+}
+.cd-open {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.2;
+}
+.cd-basefret {
+  fill: var(--muted);
+  font-size: 10px;
+  text-anchor: end;
+  dominant-baseline: central;
+}
+
+/* ---- Chord trainer controls ---- */
+.trainer-group,
+.collapse-group {
+  flex-basis: 100%;
+}
+.inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.inline-text {
+  font-size: 13px;
+  color: var(--muted);
+}
+.checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-2);
+}
+.trainer-group,
+.collapse-group {
+  flex-direction: column;
+  align-items: stretch;
+}
+.trainer-toggle,
+.collapse-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 0;
+  width: 100%;
+  text-align: left;
+}
+.trainer-toggle:hover,
+.collapse-toggle:hover {
+  color: var(--accent-2);
+}
+.trainer-toggle .caret,
+.collapse-toggle .caret {
+  color: var(--muted);
+  font-size: 12px;
+  transition: transform 0.15s ease;
+}
+.trainer-toggle.open .caret,
+.collapse-toggle.open .caret {
+  transform: rotate(90deg);
+}
+.trainer-body,
+.collapse-body {
+  margin-top: 14px;
+  width: 100%;
+}
+.transport-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-end;
+  width: 100%;
+}
+.transport-start {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.backing-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  width: 100%;
+}
+.backing-row .bpm-slider {
+  width: 130px;
+}
+.trainer-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+  width: 100%;
+}
+
+/* Long-term practice log controls, pushed to the end of the Practice head. */
+.log-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.log-count {
+  font-size: 12px;
+  color: var(--muted);
+}
+.bars-count {
+  width: 60px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+.grid-hint {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 10px 0;
+  flex-basis: 100%;
+}
+.bars-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: stretch;
+  width: 100%;
+}
+.bar {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  min-width: 104px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.bar-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.slot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.slot-chord {
+  padding: 5px 6px;
+  font-size: 13px;
+  flex: 1;
+  min-width: 0;
+}
+.slot-beats {
+  width: 40px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 4px;
+  font-size: 13px;
+  text-align: center;
+}
+.slot-beats:disabled {
+  opacity: 0.4;
+}
+.slot-x,
+.bar-x {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.slot-x:hover,
+.bar-x:hover {
+  color: var(--accent);
+}
+.add-chord {
+  background: none;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.add-chord:hover:not(:disabled) {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+.add-chord:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.add-bar {
+  align-self: stretch;
+  min-width: 64px;
+  background: none;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.add-bar:hover {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+/* ---- Practice tab ---- */
+.practice-group {
+  gap: 16px;
+}
+.routine-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+.summary-table tr.best td {
+  color: var(--accent);
+  font-weight: 700;
+}
+.practice-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.key-slots {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  flex: 1 1 560px;
+}
+@media (max-width: 720px) {
+  .key-slots {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+.key-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.key-num {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.key-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.key-time {
+  min-height: 14px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.key-slot.done .key-name {
+  color: var(--text);
+}
+.key-slot.done .key-time {
+  color: var(--accent-2);
+}
+.key-slot.current {
+  border-color: var(--accent);
+}
+.key-slot.current .key-name {
+  color: var(--accent);
+}
+.practice-actions {
+  display: flex;
+  gap: 8px;
+}
+.practice-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.now-key {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent-2);
+}
+.now-detail {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.practice-timer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.stopwatch {
+  min-width: 130px;
+  font-size: 34px;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.position-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+.position-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  min-width: 44px;
+  padding: 7px 12px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chip:hover {
+  border-color: var(--accent-2);
+}
+.chip.active {
+  background: var(--accent-2);
+  color: #05242a;
+  border-color: transparent;
+}
+.practice-summary,
+.practice-history {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.summary-head {
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.summary-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.summary-table th,
+.summary-table td {
+  padding: 4px 18px 4px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.summary-table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.history-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.history-date {
+  min-width: 170px;
+  color: var(--muted);
+}

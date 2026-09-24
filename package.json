@@ -1,0 +1,20 @@
+{
+  "name": "overture",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Overture — a browser-based guitar practice tool (metronome + interactive fretboard).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "tone": "^15.0.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^6.0.7"
+  }
+}
