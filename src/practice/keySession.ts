@@ -1,16 +1,7 @@
 import type { PitchClass } from '../music/notes';
+import { shuffled } from './shuffleBag';
 
 export const KEY_COUNT = 12;
-
-/** Fisher–Yates shuffle (returns a new array). */
-function shuffled<T>(items: T[]): T[] {
-  const out = items.slice();
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
 
 /**
  * One pass through all 12 keys in a random order. Slots 1–12 map to the

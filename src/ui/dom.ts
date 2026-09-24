@@ -23,6 +23,13 @@ export function inlineChk(chk: HTMLInputElement, text: string): HTMLElement {
   return el('label', { class: 'inline' }, [chk, el('span', { class: 'inline-text' }, [text])]);
 }
 
+/** An empty styled <select>; callers fill it with `option()`s. */
+export function selectEl(): HTMLSelectElement {
+  const s = document.createElement('select');
+  s.className = 'select';
+  return s;
+}
+
 export function option(value: string, text: string): HTMLOptionElement {
   const o = document.createElement('option');
   o.value = value;

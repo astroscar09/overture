@@ -1,6 +1,8 @@
 import { downloadLog, readLog } from '../practice/history';
 import { el, labeled, option } from './dom';
 import { createImprovRoutine } from './routines/improvRoutine';
+import { createKeyTargetsRoutine } from './routines/keyTargetsRoutine';
+import { createNoteFinderRoutine } from './routines/noteFinderRoutine';
 import { createThreeNpsRoutine } from './routines/threeNpsRoutine';
 import type { PracticeDeps, Routine } from './routines/types';
 
@@ -18,7 +20,12 @@ export interface PracticePanel {
 
 /** Practice tab: a routine picker with one routine visible at a time. */
 export function createPracticePanel(deps: PracticeDeps): PracticePanel {
-  const routines: Routine[] = [createThreeNpsRoutine(deps), createImprovRoutine(deps)];
+  const routines: Routine[] = [
+    createThreeNpsRoutine(deps),
+    createImprovRoutine(deps),
+    createNoteFinderRoutine(deps),
+    createKeyTargetsRoutine(deps),
+  ];
   let current = routines[0];
   let active = false;
 
@@ -47,7 +54,7 @@ export function createPracticePanel(deps: PracticeDeps): PracticePanel {
 
   const renderLogCount = () => {
     const log = readLog();
-    const total = log['3nps'].length + log.improv.length;
+    const total = Object.values(log).reduce((sum, entries) => sum + entries.length, 0);
     logCountEl.textContent = total === 0 ? 'No saved practice yet' : `${total} entries saved`;
     exportBtn.disabled = total === 0;
   };

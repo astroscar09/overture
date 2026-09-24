@@ -12,6 +12,8 @@
 export const LOG_KEYS = {
   '3nps': 'overture.practice.3nps.history',
   improv: 'overture.practice.improv.history',
+  noteFinder: 'overture.practice.noteFinder.history',
+  keyTargets: 'overture.practice.keyTargets.history',
 } as const;
 
 export type LogName = keyof typeof LOG_KEYS;
@@ -46,10 +48,8 @@ export function appendToLog<T>(key: string, entry: T, limit: number, id?: number
 
 /** Everything in the long-term log, keyed by routine. */
 export function readLog(): Record<LogName, unknown[]> {
-  return {
-    '3nps': loadList(LOG_KEYS['3nps']),
-    improv: loadList(LOG_KEYS.improv),
-  };
+  const entries = Object.entries(LOG_KEYS).map(([name, key]) => [name, loadList(key)] as const);
+  return Object.fromEntries(entries) as Record<LogName, unknown[]>;
 }
 
 /** The whole log as pretty-printed JSON. */

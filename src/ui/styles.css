@@ -969,3 +969,45 @@ svg.fretboard {
   min-width: 170px;
   color: var(--muted);
 }
+
+/* ---- Note-naming drills (note finder · key targets) ---- */
+.drill-note {
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--accent-2);
+  font-variant-numeric: tabular-nums;
+}
+.drill-answer {
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent);
+  min-height: 20px;
+}
+.drill-stats {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.drill-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.drill-legend .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.drill-legend .dot.root {
+  background: var(--node-root);
+}
+.drill-legend .dot.from {
+  background: var(--node-in-scale);
+}

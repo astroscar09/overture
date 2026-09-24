@@ -13,7 +13,7 @@ import {
 import { LOG_KEYS, appendToLog } from '../../practice/history';
 import { Stopwatch, formatTime } from '../../practice/stopwatch';
 import { ChordTrainer } from '../../trainer/ChordTrainer';
-import { el, inlineChk, labeled, option } from '../dom';
+import { el, inlineChk, labeled, option, selectEl } from '../dom';
 import type { PracticeDeps, Routine } from './types';
 
 const WIDTHS = [3, 4, 5, 6];
@@ -41,12 +41,6 @@ interface Attempt {
 
 const subdivisionName = (n: number) => SUBDIVISIONS.find(([value]) => value === n)?.[1] ?? `${n} per beat`;
 const rangeLabel = (from: number, to: number) => `${from === 0 ? 'open' : from}–${to}`;
-
-function selectEl(): HTMLSelectElement {
-  const s = document.createElement('select');
-  s.className = 'select';
-  return s;
-}
 
 /**
  * Routine: pick a key and a small fret range, choose a subdivision, then
