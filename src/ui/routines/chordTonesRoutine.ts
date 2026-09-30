@@ -1,21 +1,21 @@
-import { playNote } from '../../audio/engine';
+import { playChord, playNote } from '../../audio/engine';
 import { DEFAULT_FRETS } from '../../fretboard/Fretboard';
-import { improvKeyName, type Tonality } from '../../music/improv';
+import { CHORD_QUALITIES, type IntervalRole } from '../../music/chordTones';
 import {
-  DIATONIC_TARGETS,
-  diatonicPrompts,
-  intervalQuality,
-  keyNoteName,
-  ordinal,
-  pitchClassSpots,
-  promptKey,
-  resolvePrompt,
-  type DiatonicPrompt,
-  type DiatonicTarget,
+  CHORD_TARGETS,
+  DEFAULT_QUALITIES,
+  DRILL_QUALITIES,
+  chordPromptKey,
+  chordPrompts,
+  drillChordName,
+  drillNoteName,
+  resolveChordPrompt,
+  type ChordPrompt,
+  type ChordTarget,
 } from '../../music/noteDrill';
 import { noteName, pitchClass, type PitchClass } from '../../music/notes';
 import { LOG_KEYS, appendToLog } from '../../practice/history';
-import { ShuffleBag } from '../../practice/shuffleBag';
+import { RecencyPicker } from '../../practice/picker';
 import { Stopwatch, formatTime } from '../../practice/stopwatch';
 import { el, inlineChk, labeled, option, selectEl } from '../dom';
 import type { PracticeDeps, Routine } from './types';
@@ -30,56 +30,59 @@ const LOG_LIMIT = 500;
 /** Runs held for the current visit to the Practice tab. */
 const VIEW_LIMIT = 50;
 const SHOWN_RUNS = 10;
-/** Octave the reference pitches are played in (C4 = middle C). */
-const HEAR_OCTAVE_MIDI = 60;
-/** Gap between the two notes of the interval preview (ms). */
+/** Octave the chord and its tones are sounded in (C3 = MIDI 48). */
+const HEAR_BASE_MIDI = 48;
+/** Gap between the root and the answer in the two-note preview (ms). */
 const HEAR_GAP_MS = 420;
+/** The fretboard's colour class for each interval role. */
+const ROLE_SWATCH: Record<IntervalRole, string> = { R: 'tone-root', '3': 'tone-3', '5': 'tone-5', '7': 'tone-7' };
 
 interface Run {
   date: string; // ISO timestamp
   ms: number; // whole run
-  count: number; // prompts answered
+  count: number; // chords answered
   avgMs: number;
-  keyPc: number;
-  tonality: Tonality;
+  chords: string;
   target: string;
   auto: number | null; // bars per prompt, null when self-paced
 }
 
-const perPrompt = (ms: number, count: number) => (count > 0 ? ms / count : 0);
+const perChord = (ms: number, count: number) => (count > 0 ? ms / count : 0);
 
 /**
- * Routine: pick a key, then work through its notes naming the 3rd, 5th or 7th
- * above each one *within that key* — the intervals that build the key's chords.
- * Like the note finder it runs indefinitely, reshuffling its questions rather
- * than stopping after one pass.
+ * Routine: a chord is called out — C, F#m, Bb7, Dm7, Gmaj7 — and you find its
+ * 3rd, 5th or 7th on the neck. The same shape as the note finder: the neck is
+ * blank until you reveal, any chord but the one on screen can come up next,
+ * and it runs for as long as you keep pressing Next.
  */
-export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
-  const { fretboard, metronome, drone, state, startTransport, stopTransport } = deps;
+export function createChordTonesRoutine(deps: PracticeDeps): Routine {
+  const { fretboard, metronome, drone, startTransport, stopTransport } = deps;
 
   const stopwatch = new Stopwatch();
-  const bag = new ShuffleBag<DiatonicPrompt>([], promptKey);
+  const picker = new RecencyPicker<ChordPrompt>([], chordPromptKey);
   // Only this visit to the Practice tab: cleared by clearHistory() on leaving.
   let runs: Run[] = [];
   let active = false;
   let running = false;
   let revealed = false;
-  let current: DiatonicPrompt | null = null;
-  /** performance.now() when the current prompt appeared. */
+  let current: ChordPrompt | null = null;
+  /** performance.now() when the current chord appeared. */
   let askedAt = 0;
-  /** Milliseconds spent on each prompt answered so far this run. */
+  /** Milliseconds spent on each chord answered so far this run. */
   let times: number[] = [];
   let rafId: number | null = null;
   /** Bar the last auto-advance happened on, so a slower setting still lines up. */
   let lastAutoBar = 0;
 
   // ---- Setup ----
-  const keySelect = selectEl();
-  const tonalitySelect = selectEl();
-  tonalitySelect.append(option('major', 'Major'), option('minor', 'Natural minor'));
+  const qualityChecks = DRILL_QUALITIES.map(({ id, name }) => {
+    const chk = el('input', { type: 'checkbox', class: 'checkbox' }) as HTMLInputElement;
+    chk.checked = DEFAULT_QUALITIES.includes(id);
+    return { id, name, chk };
+  });
   const targetSelect = selectEl();
   targetSelect.append(
-    ...DIATONIC_TARGETS.map((t) => option(t.id, t.name)),
+    ...CHORD_TARGETS.map((t) => option(t.id, t.name)),
     option(MIXED, 'Mixed (3rds, 5ths & 7ths)'),
   );
   const autoChk = el('input', { type: 'checkbox', class: 'checkbox' }) as HTMLInputElement;
@@ -89,7 +92,6 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
 
   // ---- Drone ----
   const droneChk = el('input', { type: 'checkbox', class: 'checkbox' }) as HTMLInputElement;
-  droneChk.checked = true;
   const fifthChk = el('input', { type: 'checkbox', class: 'checkbox' }) as HTMLInputElement;
   const droneVol = el('input', {
     type: 'range',
@@ -106,68 +108,62 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
   const answerEl = el('div', { class: 'drill-answer' });
   const readout = el('div', { class: 'stopwatch' }, [formatTime(0)]);
   const startBtn = el('button', { class: 'btn primary', type: 'button' }, ['Start']);
-  const nextBtn = el('button', { class: 'btn', type: 'button' }, ['Next']);
+  const nextBtn = el('button', { class: 'btn', type: 'button' }, ['Next chord']);
   const revealBtn = el('button', { class: 'btn', type: 'button' }, ['Reveal']);
-  const hearBtn = el('button', { class: 'btn', type: 'button' }, ['Hear it']);
+  const hearBtn = el('button', { class: 'btn', type: 'button' }, ['Hear the chord']);
   const statsEl = el('div', { class: 'drill-stats' });
-  const legendEl = el('div', { class: 'drill-legend hidden' }, [
-    el('span', {}, [el('span', { class: 'dot root' }), 'the answer']),
-    el('span', {}, [el('span', { class: 'dot from' }), 'the note you started on']),
-  ]);
+  const legendEl = el('div', { class: 'chord-legend hidden' });
   const runsEl = el('div', { class: 'practice-history hidden' });
 
   // Setup is locked while a run is going so the score means one thing.
-  const setupControls = [keySelect, tonalitySelect, targetSelect, autoChk, autoBarsSelect];
+  const setupControls = [targetSelect, autoChk, autoBarsSelect, ...qualityChecks.map((q) => q.chk)];
 
-  const tonality = () => tonalitySelect.value as Tonality;
-  const keyPc = () => Number(keySelect.value);
-  const autoBars = () => (autoChk.checked ? Number(autoBarsSelect.value) : null);
-  const targets = (): DiatonicTarget[] =>
+  const qualities = () => qualityChecks.filter((q) => q.chk.checked).map((q) => q.id);
+  const targets = (): ChordTarget[] =>
     targetSelect.value === MIXED
-      ? DIATONIC_TARGETS
-      : [DIATONIC_TARGETS.find((t) => t.id === targetSelect.value) ?? DIATONIC_TARGETS[0]];
+      ? CHORD_TARGETS
+      : [CHORD_TARGETS.find((t) => t.id === targetSelect.value) ?? CHORD_TARGETS[0]];
   const targetLabel = () => (targetSelect.value === MIXED ? '3rds, 5ths & 7ths' : targets()[0].name);
-  const keyLabel = () => `${improvKeyName(keyPc(), tonality())} ${tonality() === 'major' ? 'major' : 'minor'}`;
-  const resolved = () => (current === null ? null : resolvePrompt(current, keyPc(), tonality()));
-  const spellPc = (pc: PitchClass) => keyNoteName(pc, keyPc(), tonality());
-
-  const fillKeys = () => {
-    const value = keySelect.value || '0';
-    keySelect.replaceChildren(
-      ...Array.from({ length: 12 }, (_, pc) => option(String(pc), improvKeyName(pc, tonality()))),
-    );
-    keySelect.value = value;
+  const chordsLabel = () => {
+    const names = qualityChecks.filter((q) => q.chk.checked).map((q) => q.name);
+    return names.length ? names.join(', ') : 'none';
   };
+  const autoBars = () => (autoChk.checked ? Number(autoBarsSelect.value) : null);
 
-  const refillBag = () => {
-    bag.setItems(diatonicPrompts(targets()));
-    bag.reset();
+  // The picker's memory of what it just called survives this, so changing the
+  // settings (or stopping and starting) never repeats the chord on screen.
+  const refillPool = () => picker.setItems(chordPrompts(qualities(), targets()));
+
+  /** Why there is nothing to ask, if there is nothing to ask. */
+  const poolProblem = (): string | null => {
+    if (picker.size > 0) return null;
+    if (qualities().length === 0) return 'Tick at least one chord type to drill.';
+    // 3rds and 5ths exist in every chord here, so only a 7th can come up empty.
+    return 'None of the ticked chords has a 7th — add 7, m7, maj7 or m7b5, or pick another target.';
   };
 
   // ---- Neck ----
+  /** Root + answer, colour-coded by the role each one plays in the chord. */
+  const revealRoles = (prompt: ChordPrompt): Map<PitchClass, IntervalRole> => {
+    const { targetPc } = resolveChordPrompt(prompt);
+    return new Map<PitchClass, IntervalRole>([
+      [pitchClass(prompt.rootPc), 'R'],
+      [targetPc, prompt.target.role],
+    ]);
+  };
+
   const drawNeck = () => {
     if (!active) return;
-    const r = resolved();
-    if (!running || r === null) {
+    if (!running || current === null) {
       // Idle: the whole neck is on show as a reference.
+      fretboard.setChordTones(null);
       fretboard.setPattern(null);
       fretboard.setMode('all');
       return;
     }
-    fretboard.setMode('pattern');
-    if (!revealed) {
-      // Blank until revealed — an empty pattern hides every node.
-      fretboard.setPattern({ notes: [], rootPc: r.targetPc });
-      return;
-    }
-    const openMidi = state.tuning.openMidi;
-    fretboard.setPattern({
-      notes: [
-        ...pitchClassSpots(r.targetPc, openMidi, DEFAULT_FRETS),
-        ...pitchClassSpots(r.fromPc, openMidi, DEFAULT_FRETS),
-      ],
-      rootPc: r.targetPc, // the answer takes the root colour, the start note the scale colour
-    });
+    fretboard.setMode('chord');
+    // An empty role map hides every node, so the neck is blank until you reveal.
+    fretboard.setChordTones(revealed ? revealRoles(current) : new Map());
   };
 
   // ---- Rendering ----
@@ -180,14 +176,14 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
     const header = el(
       'tr',
       {},
-      ['Answered', 'Per note', 'Total', 'Key', 'Target', 'Pace', 'When'].map((h) => el('th', {}, [h])),
+      ['Answered', 'Per chord', 'Total', 'Chords', 'Target', 'Pace', 'When'].map((h) => el('th', {}, [h])),
     );
     const rows = runs.slice(0, SHOWN_RUNS).map((r) => {
       const row = el('tr', {}, [
         el('td', {}, [String(r.count)]),
         el('td', {}, [formatTime(r.avgMs)]),
         el('td', {}, [formatTime(r.ms)]),
-        el('td', {}, [`${improvKeyName(r.keyPc, r.tonality)} ${r.tonality}`]),
+        el('td', {}, [r.chords]),
         el('td', {}, [r.target]),
         el('td', {}, [r.auto === null ? 'Self-paced' : `${r.auto} bar${r.auto === 1 ? '' : 's'}`]),
         el('td', {}, [new Date(r.date).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })]),
@@ -197,11 +193,7 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
     });
     runsEl.replaceChildren(
       ...(best
-        ? [
-            el('div', { class: 'summary-head' }, [
-              `Fastest: ${formatTime(best.avgMs)} per note over ${best.count} in ${improvKeyName(best.keyPc, best.tonality)} ${best.tonality}`,
-            ]),
-          ]
+        ? [el('div', { class: 'summary-head' }, [`Fastest: ${formatTime(best.avgMs)} per chord over ${best.count}`])]
         : []),
       el('span', { class: 'field-label' }, ['Recent runs']),
       el('div', { class: 'table-scroll' }, [
@@ -213,46 +205,56 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
   const renderStats = () => {
     const done = times.length;
     if (!running && done === 0) {
-      statsEl.textContent = `${keyLabel()} · ${targetLabel()} · ${bag.size} questions in rotation`;
+      statsEl.textContent =
+        poolProblem() ?? `${chordsLabel()} · ${targetLabel()} · ${picker.size} chords in rotation`;
       return;
     }
-    // Averaged over the questions actually answered, so the one on screen does
-    // not drag the number up while you are still working it out.
+    // Averaged over the chords actually answered, so the one on screen does not
+    // drag the number up while you are still working it out.
     const banked = times.reduce((a, b) => a + b, 0);
     statsEl.textContent =
-      `${done} answered · ${formatTime(perPrompt(banked, done))} per note` +
+      `${done} answered · ${formatTime(perChord(banked, done))} per chord` +
       (done ? ` · fastest ${formatTime(Math.min(...times))}` : '') +
       ` · ${formatTime(stopwatch.elapsed())} total`;
   };
 
   const render = () => {
-    const r = resolved();
+    const answer = current === null ? null : resolveChordPrompt(current);
     promptEl.textContent =
-      current === null || r === null ? '–' : `${spellPc(r.fromPc)} → ${current.target.label}`;
-    if (!running || current === null || r === null) {
+      current === null ? '–' : `${drillChordName(current.rootPc, current.qualityId)} → ${current.target.label}`;
+    if (!running || current === null) {
       askEl.textContent =
         current === null
-          ? 'Press Start: a note from the key is called and you play its 3rd, 5th or 7th within that key.'
+          ? 'Press Start: a chord is called and you find its 3rd, 5th or 7th on the neck.'
           : 'Run over. Press Start to go again.';
     } else {
+      const quality = CHORD_QUALITIES[current.qualityId];
       askEl.textContent =
-        `${keyLabel()} · ${spellPc(r.fromPc)} is the ${ordinal(current.degree + 1)} degree · ` +
-        `play the ${current.target.label} above it, staying in the key.`;
+        `${drillNoteName(current.rootPc)} ${quality.label.toLowerCase()} · ` +
+        `find the ${current.target.label} of the chord.`;
     }
-    if (revealed && current !== null && r !== null) {
+    if (revealed && current !== null && answer !== null) {
       answerEl.textContent =
-        `${spellPc(r.targetPc)} — the ${ordinal(r.targetDegree + 1)} degree, ` +
-        `a ${intervalQuality(current.target, r.fromPc, r.targetPc)} up`;
+        `${drillNoteName(answer.targetPc)} — the ${answer.toneName} of ` +
+        `${drillChordName(current.rootPc, current.qualityId)}`;
     } else {
       answerEl.textContent = '';
     }
-    legendEl.classList.toggle('hidden', !revealed);
+    legendEl.classList.toggle('hidden', !revealed || current === null);
+    if (revealed && current !== null) {
+      // Only the two colours actually lit on the neck.
+      legendEl.replaceChildren(
+        el('span', { class: 'swatch tone-root' }, ['Chord root']),
+        el('span', { class: `swatch ${ROLE_SWATCH[current.target.role]}` }, [`the ${current.target.label}`]),
+      );
+    }
     startBtn.textContent = running ? 'Stop' : 'Start';
     startBtn.classList.toggle('is-running', running);
+    startBtn.disabled = !running && picker.size === 0;
     nextBtn.disabled = !running;
     revealBtn.disabled = !running || revealed;
     hearBtn.disabled = current === null;
-    hearBtn.textContent = revealed ? 'Hear the interval' : 'Hear the note';
+    hearBtn.textContent = revealed ? 'Hear the answer' : 'Hear the chord';
     for (const control of setupControls) control.disabled = running;
     autoBarsSelect.disabled = running || !autoChk.checked;
     readout.textContent = formatTime(running ? performance.now() - askedAt : 0);
@@ -271,37 +273,37 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
     rafId = null;
   };
 
-  /** Ask the next question, banking the time spent on the one before it. */
+  /** Call the next chord, banking the time spent on the one before it. */
   const ask = (bank: boolean) => {
     if (bank && current !== null) times.push(performance.now() - askedAt);
-    const next = bag.next();
+    const next = picker.next();
     if (next === null) return;
     current = next;
     revealed = false;
     askedAt = performance.now();
+    if (droneChk.checked && running) void drone.start(pitchClass(current.rootPc));
     drawNeck();
     render();
   };
 
   const startRun = async () => {
     if (running) return;
-    refillBag();
-    if (bag.size === 0) return;
+    refillPool();
+    if (picker.size === 0) return;
     times = [];
     stopwatch.reset();
     stopwatch.start();
     running = true;
     current = null;
     lastAutoBar = 0;
-    ask(false);
-    tick();
     if (droneChk.checked) {
       drone.setFifth(fifthChk.checked);
       drone.setVolume(Number(droneVol.value));
-      void drone.start(keyPc());
     }
+    ask(false);
+    tick();
     if (autoBars() !== null) {
-      // Restart the click so the first question gets a whole bar.
+      // Restart the click so the first chord gets a whole bar.
       stopTransport();
       await startTransport();
     }
@@ -319,21 +321,20 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
     const auto = autoBars();
     endRun();
     if (auto !== null) stopTransport();
-    // The question on screen when you stopped was never answered, so it is not scored.
+    // The chord on screen when you stopped was never answered, so it is not scored.
     if (times.length > 0) {
       const ms = times.reduce((a, b) => a + b, 0);
       const run: Run = {
         date: new Date().toISOString(),
         ms,
         count: times.length,
-        avgMs: perPrompt(ms, times.length),
-        keyPc: keyPc(),
-        tonality: tonality(),
+        avgMs: perChord(ms, times.length),
+        chords: chordsLabel(),
         target: targetLabel(),
         auto,
       };
       runs = [run, ...runs].slice(0, VIEW_LIMIT);
-      appendToLog(LOG_KEYS.keyTargets, run, LOG_LIMIT);
+      appendToLog(LOG_KEYS.chordTones, run, LOG_LIMIT);
     }
     drawNeck();
     render();
@@ -361,36 +362,34 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
   nextBtn.addEventListener('click', () => ask(true));
   revealBtn.addEventListener('click', reveal);
   hearBtn.addEventListener('click', () => {
-    const r = resolved();
-    if (r === null) return;
-    const from = HEAR_OCTAVE_MIDI + pitchClass(r.fromPc);
-    void playNote(noteName(from), '4n');
-    // Before the reveal only the starting note sounds, so the answer stays hidden.
-    if (!revealed) return;
-    const up = from + pitchClass(r.targetPc - r.fromPc);
-    window.setTimeout(() => void playNote(noteName(up), '4n'), HEAR_GAP_MS);
+    if (current === null) return;
+    const root = HEAR_BASE_MIDI + pitchClass(current.rootPc);
+    if (!revealed) {
+      // The whole chord as a reference: you still have to pick the tone out of it.
+      const tones = CHORD_QUALITIES[current.qualityId].tones;
+      void playChord(tones.map((t) => noteName(root + t.semitone)));
+      return;
+    }
+    const { semitone } = resolveChordPrompt(current);
+    void playNote(noteName(root), '4n');
+    window.setTimeout(() => void playNote(noteName(root + semitone), '4n'), HEAR_GAP_MS);
   });
 
   const onSetupChange = () => {
-    refillBag();
-    drawNeck();
+    refillPool();
     render();
   };
-  keySelect.addEventListener('change', onSetupChange);
-  tonalitySelect.addEventListener('change', () => {
-    fillKeys();
-    onSetupChange();
-  });
   targetSelect.addEventListener('change', onSetupChange);
+  for (const { chk } of qualityChecks) chk.addEventListener('change', onSetupChange);
   autoChk.addEventListener('change', render);
   droneChk.addEventListener('change', () => {
     if (!droneChk.checked) drone.stop();
-    else if (running) void drone.start(keyPc());
+    else if (running && current !== null) void drone.start(pitchClass(current.rootPc));
   });
   fifthChk.addEventListener('change', () => drone.setFifth(fifthChk.checked));
   droneVol.addEventListener('input', () => drone.setVolume(Number(droneVol.value)));
 
-  // Auto-advance rides the shared click: a new question every N bars.
+  // Auto-advance rides the shared click: a new chord every N bars.
   metronome.onBeat((info) => {
     const bars = autoBars();
     if (!running || bars === null || !info.isAccent) return;
@@ -402,13 +401,20 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
   // ---- Assemble ----
   const element = el('div', { class: 'routine-body' }, [
     el('div', { class: 'grid-hint' }, [
-      'Pick a key and a target. A note from the key is called and you play (or name) the 3rd, 5th or 7th ' +
-        'above it using only notes from that key — the intervals its chords are built from. ' +
-        'The neck stays blank until you reveal, and the questions reshuffle so the drill never runs out.',
+      'A chord is called out — C, F#m, A#7, Dm7 — and the neck goes blank: find its 3rd, 5th or 7th, ' +
+        'then reveal to check yourself. Tick the chord types you want in the mix. Like the note finder ' +
+        'it runs as long as you like, never calls the same chord twice in a row, and leans towards the ' +
+        'ones you have not had lately.',
     ]),
     el('div', { class: 'trainer-head' }, [
-      labeled('Key', keySelect),
-      labeled('Scale', tonalitySelect),
+      labeled(
+        'Chord types',
+        el(
+          'div',
+          { class: 'quality-checks' },
+          qualityChecks.map(({ name, chk }) => inlineChk(chk, name)),
+        ),
+      ),
       labeled('Target', targetSelect),
       inlineChk(autoChk, 'Advance with the click'),
       labeled('Pace', autoBarsSelect),
@@ -421,25 +427,24 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
     legendEl,
     statsEl,
     el('div', { class: 'backing-row' }, [
-      inlineChk(droneChk, 'Drone on the key (plays while running)'),
+      inlineChk(droneChk, 'Drone on the chord root'),
       inlineChk(fifthChk, 'Add 5th'),
       labeled('Drone volume', droneVol),
     ]),
     runsEl,
   ]);
 
-  fillKeys();
-  refillBag();
+  refillPool();
   render();
 
   return {
-    id: 'keyTargets',
-    name: 'Key targets · 3rds, 5ths & 7ths',
+    id: 'chordTones',
+    name: 'Chord tones · 3rds, 5ths & 7ths',
     element,
     activate() {
       active = true;
       fretboard.setFrets(DEFAULT_FRETS);
-      refillBag();
+      refillPool();
       drawNeck();
       render();
     },
@@ -447,6 +452,7 @@ export function createKeyTargetsRoutine(deps: PracticeDeps): Routine {
       if (!active) return;
       active = false;
       abandonRun();
+      fretboard.setChordTones(null);
       fretboard.setPattern(null);
       render();
     },

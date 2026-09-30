@@ -1,8 +1,12 @@
 import { DEFAULT_FRETS } from '../../fretboard/Fretboard';
 import { playNote } from '../../audio/engine';
 import {
+  DEFAULT_SPELLING,
   NOTE_POOLS,
+  SPELLINGS,
   drillNoteName,
+  flatNoteName,
+  hasFlatName,
   pitchClassSpots,
   spotsLabel,
   stringLabel,
@@ -11,7 +15,7 @@ import {
 } from '../../music/noteDrill';
 import { noteName, type PitchClass } from '../../music/notes';
 import { LOG_KEYS, appendToLog } from '../../practice/history';
-import { ShuffleBag } from '../../practice/shuffleBag';
+import { RecencyPicker } from '../../practice/picker';
 import { Stopwatch, formatTime } from '../../practice/stopwatch';
 import { el, inlineChk, labeled, option, selectEl } from '../dom';
 import type { PracticeDeps, Routine } from './types';
@@ -37,6 +41,7 @@ interface Run {
   count: number; // notes found
   avgMs: number;
   pool: string;
+  spelling: string;
   strings: string;
   maxFret: number;
   auto: number | null; // bars per note, null when self-paced
@@ -47,20 +52,28 @@ const perNote = (ms: number, count: number) => (count > 0 ? ms / count : 0);
 /**
  * Routine: a random note is called out and you find it on the neck, which is
  * drawn blank so nothing gives the answer away. "Next" calls another note and
- * keeps going for as long as you like — the pool reshuffles itself rather than
- * stopping after 12, and the same note never comes up twice in a row.
+ * keeps going for as long as you like. Every note but the current one is in
+ * play on each draw (see RecencyPicker), and Start counts as a draw too, so a
+ * fresh run never opens with the note the last one ended on.
  */
 export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
   const { fretboard, metronome, state, startTransport, stopTransport } = deps;
 
   const stopwatch = new Stopwatch();
-  const bag = new ShuffleBag<PitchClass>([]);
+  const picker = new RecencyPicker<PitchClass>([]);
   // Only this visit to the Practice tab: cleared by clearHistory() on leaving.
   let runs: Run[] = [];
   let active = false;
   let running = false;
   let revealed = false;
   let currentPc: PitchClass | null = null;
+  /** How the current note was written — "A#" or "Bb" for the same fret. */
+  let currentName = '';
+  /**
+   * Which spelling each accidental gets next when both are in play. Alternating
+   * beats a coin toss: every note turns up as a sharp and as a flat.
+   */
+  const flatNext = new Map<PitchClass, boolean>();
   /** performance.now() when the current note was called. */
   let calledAt = 0;
   /** Milliseconds spent on each note found so far this run. */
@@ -73,6 +86,9 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
   const poolSelect = selectEl();
   poolSelect.append(...NOTE_POOLS.map((p) => option(p.id, p.name)));
   const stringSelect = selectEl();
+  const spellingSelect = selectEl();
+  spellingSelect.append(...SPELLINGS.map((sp) => option(sp.id, sp.name)));
+  spellingSelect.value = DEFAULT_SPELLING;
   const fretSelect = selectEl();
   fretSelect.append(...FRET_LIMITS.map((f) => option(String(f), `Up to fret ${f}`)));
   fretSelect.value = String(DEFAULT_LIMIT);
@@ -94,9 +110,19 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
   const runsEl = el('div', { class: 'practice-history hidden' });
 
   // Setup is locked while a run is going so the score means one thing.
-  const setupControls = [poolSelect, stringSelect, fretSelect, autoChk, autoBarsSelect];
+  const setupControls = [poolSelect, spellingSelect, stringSelect, fretSelect, autoChk, autoBarsSelect];
 
   const pool = (): NotePool => NOTE_POOLS.find((p) => p.id === poolSelect.value) ?? NOTE_POOLS[0];
+  const spellingName = () => SPELLINGS.find((sp) => sp.id === spellingSelect.value)?.name ?? SPELLINGS[0].name;
+
+  /** Write the note that is being called, sharp or flat as the setting asks. */
+  const nameFor = (pc: PitchClass): string => {
+    if (!hasFlatName(pc) || spellingSelect.value === 'sharps') return drillNoteName(pc);
+    if (spellingSelect.value === 'flats') return flatNoteName(pc);
+    const useFlat = flatNext.get(pc) ?? Math.random() < 0.5;
+    flatNext.set(pc, !useFlat);
+    return useFlat ? flatNoteName(pc) : drillNoteName(pc);
+  };
   const maxFret = () => Number(fretSelect.value);
   const onlyString = (): number | null => (stringSelect.value === ANY_STRING ? null : Number(stringSelect.value));
   const autoBars = () => (autoChk.checked ? Number(autoBarsSelect.value) : null);
@@ -127,10 +153,9 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
    */
   const askableNotes = (): PitchClass[] => pool().pitchClasses.filter((pc) => spotsFor(pc).length > 0);
 
-  const refillBag = () => {
-    bag.setItems(askableNotes());
-    bag.reset();
-  };
+  // The picker's memory of what it has just called survives this, so changing
+  // the settings (or stopping and starting) never repeats the note on screen.
+  const refillPool = () => picker.setItems(askableNotes());
 
   // ---- Neck ----
   const drawNeck = () => {
@@ -163,7 +188,7 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
         el('td', {}, [String(r.count)]),
         el('td', {}, [formatTime(r.avgMs)]),
         el('td', {}, [formatTime(r.ms)]),
-        el('td', {}, [r.pool]),
+        el('td', {}, [r.spelling ? `${r.pool} · ${r.spelling.toLowerCase()}` : r.pool]),
         el('td', {}, [r.strings]),
         el('td', {}, [`0–${r.maxFret}`]),
         el('td', {}, [r.auto === null ? 'Self-paced' : `${r.auto} bar${r.auto === 1 ? '' : 's'}`]),
@@ -186,7 +211,9 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
   const renderStats = () => {
     const found = times.length;
     if (!running && found === 0) {
-      statsEl.textContent = `${askableNotes().length} notes in the pool · ${stringsLabel().toLowerCase()}, frets 0–${maxFret()}`;
+      statsEl.textContent =
+        `${askableNotes().length} notes in the pool · ${spellingName().toLowerCase()} · ` +
+        `${stringsLabel()}, frets 0–${maxFret()}`;
       return;
     }
     // Averaged over the notes actually found, so the one on screen does not
@@ -199,7 +226,7 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
   };
 
   const render = () => {
-    noteEl.textContent = currentPc === null ? '–' : drillNoteName(currentPc);
+    noteEl.textContent = currentPc === null ? '–' : currentName;
     if (!running) {
       askEl.textContent =
         currentPc === null
@@ -213,10 +240,14 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
     }
     if (revealed && currentPc !== null) {
       const spots = spotsFor(currentPc);
-      answerEl.textContent =
+      const where =
         onlyString() === null
           ? `${spots.length} place${spots.length === 1 ? '' : 's'} on the neck (lit up)`
           : spotsLabel(spots, state.tuning.openMidi);
+      // The neck labels everything with sharps, so say so when you asked for a flat.
+      const enharmonic =
+        currentName === drillNoteName(currentPc) ? '' : ` · the neck writes it ${drillNoteName(currentPc)}`;
+      answerEl.textContent = where + enharmonic;
     } else {
       answerEl.textContent = '';
     }
@@ -247,9 +278,10 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
   /** Call the next note, banking the time spent on the one before it. */
   const callNote = (bank: boolean) => {
     if (bank && currentPc !== null) times.push(performance.now() - calledAt);
-    const next = bag.next();
+    const next = picker.next();
     if (next === null) return;
     currentPc = next;
+    currentName = nameFor(next);
     revealed = false;
     calledAt = performance.now();
     drawNeck();
@@ -258,8 +290,8 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
 
   const startRun = async () => {
     if (running) return;
-    refillBag();
-    if (bag.size === 0) return;
+    refillPool();
+    if (picker.size === 0) return;
     times = [];
     stopwatch.reset();
     stopwatch.start();
@@ -295,6 +327,7 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
         count: times.length,
         avgMs: perNote(ms, times.length),
         pool: pool().name,
+        spelling: spellingName(),
         strings: stringsLabel(),
         maxFret: maxFret(),
         auto,
@@ -332,10 +365,11 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
   });
 
   const onSetupChange = () => {
-    refillBag();
+    refillPool();
     render();
   };
   poolSelect.addEventListener('change', onSetupChange);
+  spellingSelect.addEventListener('change', onSetupChange);
   stringSelect.addEventListener('change', onSetupChange);
   fretSelect.addEventListener('change', onSetupChange);
   autoChk.addEventListener('change', render);
@@ -353,12 +387,15 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
   const element = el('div', { class: 'routine-body' }, [
     el('div', { class: 'grid-hint' }, [
       'A note is called out and the neck goes blank: find it, then reveal to check yourself. ' +
-        'Next calls another note and the drill keeps going as long as you like — the pool reshuffles ' +
-        'instead of stopping after 12, and you never get the same note twice in a row. ' +
-        'Narrow it to one string to learn that string on its own.',
+        'Next calls another note and the drill keeps going as long as you like. Any of the other notes ' +
+        'can come up next — never the one you are on, and the ones you have just had are unlikely to ' +
+        'return, so nothing goes missing for long. The black-key notes are called out both ways, as A# ' +
+        'and as Bb, so either spelling gets you to the same fret. Narrow it to one string to learn that ' +
+        'string on its own.',
     ]),
     el('div', { class: 'trainer-head' }, [
       labeled('Notes', poolSelect),
+      labeled('Spelling', spellingSelect),
       labeled('Strings', stringSelect),
       labeled('Area', fretSelect),
       inlineChk(autoChk, 'Advance with the click'),
@@ -374,7 +411,7 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
   ]);
 
   fillStrings();
-  refillBag();
+  refillPool();
   render();
 
   return {
@@ -385,7 +422,7 @@ export function createNoteFinderRoutine(deps: PracticeDeps): Routine {
       active = true;
       fretboard.setFrets(DEFAULT_FRETS);
       fillStrings(); // the tuning may have changed while away
-      refillBag();
+      refillPool();
       drawNeck();
       render();
     },

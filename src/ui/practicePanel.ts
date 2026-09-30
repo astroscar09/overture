@@ -1,7 +1,7 @@
 import { downloadLog, readLog } from '../practice/history';
 import { el, labeled, option } from './dom';
 import { createImprovRoutine } from './routines/improvRoutine';
-import { createKeyTargetsRoutine } from './routines/keyTargetsRoutine';
+import { createChordTonesRoutine } from './routines/chordTonesRoutine';
 import { createNoteFinderRoutine } from './routines/noteFinderRoutine';
 import { createThreeNpsRoutine } from './routines/threeNpsRoutine';
 import type { PracticeDeps, Routine } from './routines/types';
@@ -24,7 +24,7 @@ export function createPracticePanel(deps: PracticeDeps): PracticePanel {
     createThreeNpsRoutine(deps),
     createImprovRoutine(deps),
     createNoteFinderRoutine(deps),
-    createKeyTargetsRoutine(deps),
+    createChordTonesRoutine(deps),
   ];
   let current = routines[0];
   let active = false;

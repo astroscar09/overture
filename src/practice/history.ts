@@ -13,10 +13,16 @@ export const LOG_KEYS = {
   '3nps': 'overture.practice.3nps.history',
   improv: 'overture.practice.improv.history',
   noteFinder: 'overture.practice.noteFinder.history',
-  keyTargets: 'overture.practice.keyTargets.history',
+  chordTones: 'overture.practice.chordTones.history',
 } as const;
 
 export type LogName = keyof typeof LOG_KEYS;
+
+/**
+ * Keys written by routines that no longer exist. Nothing reads them, but a
+ * clear should still take them with it rather than leaving them behind.
+ */
+const RETIRED_LOG_KEYS = ['overture.practice.keyTargets.history'];
 
 export function loadList<T>(key: string): T[] {
   try {
@@ -70,7 +76,7 @@ export function downloadLog(): void {
 
 /** Erase the long-term log (both routines). */
 export function clearLog(): void {
-  for (const key of Object.values(LOG_KEYS)) {
+  for (const key of [...Object.values(LOG_KEYS), ...RETIRED_LOG_KEYS]) {
     try {
       localStorage.removeItem(key);
     } catch {

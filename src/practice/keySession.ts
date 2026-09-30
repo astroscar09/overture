@@ -1,5 +1,5 @@
 import type { PitchClass } from '../music/notes';
-import { shuffled } from './shuffleBag';
+import { shuffled } from './picker';
 
 export const KEY_COUNT = 12;
 

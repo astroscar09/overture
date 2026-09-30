@@ -1011,3 +1011,12 @@ svg.fretboard {
 .drill-legend .dot.from {
   background: var(--node-in-scale);
 }
+
+/* Chord-type tick boxes on the chord-tone drill. */
+.quality-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+  padding: 7px 0;
+}
