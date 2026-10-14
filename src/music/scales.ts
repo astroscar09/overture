@@ -1,4 +1,4 @@
-import type { PitchClass } from './notes';
+import { pitchClass, type PitchClass } from './notes';
 
 // Scales as semitone intervals measured from the root (0).
 export interface Scale {
@@ -25,4 +25,26 @@ export const SCALES: Record<string, Scale> = {
 /** The set of pitch classes (0–11) belonging to a scale rooted at `rootPc`. */
 export function scalePitchClasses(rootPc: PitchClass, scale: Scale): Set<PitchClass> {
   return new Set(scale.intervals.map((i) => (rootPc + i) % 12));
+}
+
+/**
+ * Every scale note on every string between two frets (inclusive) — the shape
+ * you can reach without leaving a fret window. `openMidi` is the tuning's
+ * open-string MIDI numbers, low string first.
+ */
+export function scaleSpots(
+  rootPc: PitchClass,
+  scale: Scale,
+  openMidi: number[],
+  fromFret: number,
+  toFret: number,
+): { string: number; fret: number }[] {
+  const pcs = scalePitchClasses(rootPc, scale);
+  const spots: { string: number; fret: number }[] = [];
+  openMidi.forEach((open, string) => {
+    for (let fret = fromFret; fret <= toFret; fret++) {
+      if (pcs.has(pitchClass(open + fret))) spots.push({ string, fret });
+    }
+  });
+  return spots;
 }

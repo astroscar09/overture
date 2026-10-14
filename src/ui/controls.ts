@@ -24,7 +24,14 @@ import {
   type Bar,
 } from '../music/progression';
 import { el, inlineChk, labeled, option } from './dom';
+import { TOPICS } from '../exercises';
 import { createPracticePanel } from './practicePanel';
+import type { ProgressLog } from '../practice/progress';
+import { createTabBar } from './tabs';
+import { createTechniquePanel } from './technique/TechniquePanel';
+import { createEarPanel } from './ear/EarPanel';
+import { createProgressPanel } from './progress/ProgressPanel';
+import { createQuestionPanel } from './questions/QuestionPanel';
 
 interface Deps {
   metronome: Metronome;
@@ -36,6 +43,7 @@ interface Deps {
   chordPanelEl: HTMLElement;
   transportEl: HTMLElement;
   state: AppState;
+  progress: ProgressLog;
 }
 
 const MIN_BPM = 40;
@@ -44,10 +52,10 @@ const MAX_BARS = 32;
 const HOLD_VALUE = 'hold';
 const DEFAULT_PROGRESSION = 'popC';
 
-type TabName = 'trainer' | 'practice' | 'display';
+type TabName = 'trainer' | 'practice' | 'theory' | 'technique' | 'ear' | 'progress' | 'display';
 
 export function createControls(container: HTMLElement, deps: Deps): void {
-  const { metronome, fretboard, trainer, backing, drone, chordPanel, chordPanelEl, transportEl, state } = deps;
+  const { metronome, fretboard, trainer, backing, drone, chordPanel, chordPanelEl, transportEl, state, progress } = deps;
 
   // ---- Transport (start/stop) ----
   // Several Start/Stop buttons can exist (the top bar and one inside the chord
@@ -94,6 +102,33 @@ export function createControls(container: HTMLElement, deps: Deps): void {
       subdivisionSelect.value = String(n);
       metronome.setSubdivision(n);
     },
+  });
+
+  const theory = createQuestionPanel({ fretboard, progress, topics: TOPICS, kind: 'theory' });
+  const ear = createEarPanel({ fretboard, progress });
+  // The review queue hands back a log reference; this turns it into a tab and
+  // a selected topic, so "work on this next" is one click rather than a hunt.
+  const progressPanel = createProgressPanel({
+    progress,
+    onReview(ref) {
+      if (ref.startsWith('technique:')) {
+        if (techniqueLab.selectTechnique(ref.slice('technique:'.length))) setTab('technique');
+        return;
+      }
+      if (theory.selectTopic(ref)) {
+        setTab('theory');
+        return;
+      }
+      if (ear.selectTopic(ref)) setTab('ear');
+    },
+  });
+  const techniqueLab = createTechniquePanel({
+    fretboard,
+    metronome,
+    state,
+    progress,
+    startTransport,
+    stopTransport,
   });
 
   // ---- Beat indicator ----
@@ -652,6 +687,9 @@ export function createControls(container: HTMLElement, deps: Deps): void {
       chordPanel(null);
       fretboard.setChordShape(null);
       if (currentTab === 'practice') practice.refresh();
+      else if (currentTab === 'theory') theory.refresh();
+      else if (currentTab === 'technique') techniqueLab.refresh();
+      else if (currentTab === 'ear') ear.refresh();
       else applyFretboard();
     }
   };
@@ -720,58 +758,63 @@ export function createControls(container: HTMLElement, deps: Deps): void {
     labeled('Tuning', tuningSelect),
   ]);
 
-  // Persistent transport bar (shared tempo/start) mounts above the neck and
-  // stays visible on every tab.
-  transportEl.replaceChildren(el('div', { class: 'group' }, [transportRow]));
+  // Persistent transport (shared tempo/start) lives in the sticky top rail, so
+  // it stays under your hand on every tab and never scrolls away mid-practice.
+  transportEl.replaceChildren(transportRow);
 
   // Three tab panels; the transport + neck above them stay put as you switch.
   const trainerPanel = el('div', { class: 'tab-panel' }, [
     el('div', { class: 'group trainer-group' }, [trainerBody]),
   ]);
   const practicePanel = el('div', { class: 'tab-panel' }, [practice.element]);
+  const theoryPanel = el('div', { class: 'tab-panel' }, [theory.element]);
+  const techniquePanel = el('div', { class: 'tab-panel' }, [techniqueLab.element]);
+  const earPanel = el('div', { class: 'tab-panel' }, [ear.element]);
+  const progressTabPanel = el('div', { class: 'tab-panel' }, [progressPanel.element]);
   const displayPanel = el('div', { class: 'tab-panel' }, [fretGroup]);
 
   // ---- Tab bar ----
-  const panels: Record<TabName, HTMLElement> = {
-    trainer: trainerPanel,
-    practice: practicePanel,
-    display: displayPanel,
-  };
-  const tabButtons: Record<TabName, HTMLButtonElement> = {
-    trainer: el('button', { class: 'tab', type: 'button', role: 'tab' }, ['Chord Trainer']),
-    practice: el('button', { class: 'tab', type: 'button', role: 'tab' }, ['Practice']),
-    display: el('button', { class: 'tab', type: 'button', role: 'tab' }, ['Display']),
-  };
-  const tabBar = el('div', { class: 'tab-bar', role: 'tablist' }, [
-    tabButtons.trainer,
-    tabButtons.practice,
-    tabButtons.display,
-  ]);
+  // The registry owns which panel is on screen; everything a tab has to do on
+  // the way in or out stays here, where the features it touches live.
+  const tabs = createTabBar(
+    [
+      { id: 'trainer', label: 'Chord Trainer', panel: trainerPanel },
+      { id: 'practice', label: 'Practice', panel: practicePanel },
+      { id: 'theory', label: 'Theory', panel: theoryPanel },
+      { id: 'technique', label: 'Technique', panel: techniquePanel },
+      { id: 'ear', label: 'Ear', panel: earPanel },
+      { id: 'progress', label: 'Progress', panel: progressTabPanel },
+      { id: 'display', label: 'Display', panel: displayPanel },
+    ],
+    (name) => {
+      currentTab = name as TabName;
+      // The Now/Next chords (above the neck) show only on the Chord Trainer tab.
+      chordPanelEl.classList.toggle('hidden', name !== 'trainer');
+      // The trainer only drives the neck on its own tab; the metronome keeps
+      // running across tabs (shared transport).
+      trainer.setEnabled(name === 'trainer');
+      // Practice hands the neck back before the other tabs redraw it, and takes
+      // it over only after refreshTrainer() has run.
+      // Both neck-owning panels hand it back before anything else redraws.
+      if (name !== 'practice') practice.deactivate();
+      if (name !== 'theory') theory.deactivate();
+      if (name !== 'technique') techniqueLab.deactivate();
+      if (name !== 'ear') ear.deactivate();
+      if (name !== 'progress') progressPanel.deactivate();
+      prevVoicing = null;
+      refreshTrainer();
+      if (name === 'practice') practice.activate();
+      if (name === 'theory') theory.activate();
+      if (name === 'technique') techniqueLab.activate();
+      if (name === 'ear') ear.activate();
+      // Opening Progress recomputes everything from the log, so figures are
+      // never stale after a practice session on another tab.
+      if (name === 'progress') progressPanel.activate();
+    },
+  );
+  const setTab = (name: TabName) => tabs.setTab(name);
 
-  const setTab = (name: TabName) => {
-    currentTab = name;
-    for (const key of Object.keys(panels) as TabName[]) {
-      panels[key].classList.toggle('hidden', key !== name);
-      tabButtons[key].classList.toggle('active', key === name);
-      tabButtons[key].setAttribute('aria-selected', String(key === name));
-    }
-    // The Now/Next chords (above the neck) show only on the Chord Trainer tab.
-    chordPanelEl.classList.toggle('hidden', name !== 'trainer');
-    // The trainer only drives the neck on its own tab; the metronome keeps
-    // running across tabs (shared transport).
-    trainer.setEnabled(name === 'trainer');
-    // Practice hands the neck back before the other tabs redraw it, and takes
-    // it over only after refreshTrainer() has run.
-    if (name !== 'practice') practice.deactivate();
-    prevVoicing = null;
-    refreshTrainer();
-    if (name === 'practice') practice.activate();
-  };
-  for (const key of Object.keys(tabButtons) as TabName[]) {
-    tabButtons[key].addEventListener('click', () => setTab(key));
-  }
-
-  container.replaceChildren(tabBar, trainerPanel, practicePanel, displayPanel);
+  container.replaceChildren(tabs.element, ...tabs.panels);
 
   // ---- Initial sync ----
   setBpm(state.bpm);

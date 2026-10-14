@@ -5,7 +5,7 @@ import { playNote } from '../audio/engine';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-export type DisplayMode = 'all' | 'scale' | 'chord' | 'improv' | 'pattern';
+export type DisplayMode = 'all' | 'scale' | 'chord' | 'improv' | 'pattern' | 'marks';
 
 /** Neck length used everywhere except where a view needs more frets. */
 export const DEFAULT_FRETS = 15;
@@ -19,6 +19,10 @@ const ROLE_CLASS: Record<IntervalRole, string> = {
 };
 const ROLE_CLASSES = Object.values(ROLE_CLASS);
 
+const MARK_CLASSES = [
+  'mark-primary', 'mark-secondary', 'mark-ghost', 'mark-target', 'mark-correct', 'mark-wrong',
+];
+
 /** Two-chord improv overlay: chord-A / chord-B tones + a dim scale background. */
 export interface ImprovSpec {
   chordA: Set<PitchClass>;
@@ -26,6 +30,24 @@ export interface ImprovSpec {
   rootA: PitchClass;
   rootB: PitchClass;
   scale: Set<PitchClass>; // dim background pool (may be empty)
+}
+
+/**
+ * How a mark is drawn. Shape carries as much of the meaning as colour does, so
+ * the neck stays readable to anyone who cannot separate two hues.
+ */
+export type MarkStyle = 'primary' | 'secondary' | 'ghost' | 'target' | 'correct' | 'wrong';
+
+/**
+ * A single annotated spot. Theory Lab, ear training and the technique view all
+ * draw through this rather than each adding a display mode of their own.
+ */
+export interface Mark {
+  string: number;
+  fret: number;
+  /** Replaces the note name inside the dot, e.g. "3" or "R". */
+  label?: string;
+  style?: MarkStyle;
 }
 
 /** A fingering pattern (e.g. a 3NPS scale position): exact string/fret spots. */
@@ -75,6 +97,14 @@ export class Fretboard {
   // Fingering pattern (mode 'pattern'): string:fret spots to show.
   private pattern: PatternSpec | null = null;
   private patternSpots: Set<string> = new Set();
+  // Annotated spots (mode 'marks'), keyed by string:fret.
+  private marks: Map<string, Mark> = new Map();
+  // When true, unmarked notes stay visible and clickable behind the marks —
+  // which is what an exercise that asks you to find a note needs.
+  private marksShowRest = false;
+  // Listeners told which spot was clicked, for exercises that ask you to
+  // point at the neck. They fire alongside the usual note preview.
+  private selectListeners = new Set<(spot: { string: number; fret: number; midi: number }) => void>();
   // When set, a chord shape (fret per string, -1 = muted) overrides the mode.
   private chordShape: number[] | null = null;
 
@@ -198,6 +228,13 @@ export class Fretboard {
           void playNote(noteName(midi, true));
           group.classList.add('active');
           window.setTimeout(() => group.classList.remove('active'), 220);
+          for (const listener of [...this.selectListeners]) {
+            try {
+              listener({ string: s, fret: f, midi });
+            } catch (error) {
+              console.error('fretboard select listener failed', error);
+            }
+          }
         };
         group.addEventListener('click', play);
         group.addEventListener('keydown', (e) => {
@@ -232,6 +269,7 @@ export class Fretboard {
       let improvScale = false;
       let improvRoot = false;
       let patternStart = false;
+      let mark: Mark | undefined;
 
       if (this.chordShape) {
         const shapeFret = this.chordShape[node.string];
@@ -261,6 +299,9 @@ export class Fretboard {
         inScale = this.scaleSet.has(pc);
         visible = inScale;
         isRoot = pc === this.rootPc;
+      } else if (this.mode === 'marks') {
+        mark = this.marks.get(spotKey(node.string, node.fret));
+        visible = mark !== undefined || this.marksShowRest;
       } else if (this.mode === 'pattern') {
         visible = this.patternSpots.has(spotKey(node.string, node.fret));
         inScale = visible;
@@ -282,6 +323,11 @@ export class Fretboard {
       node.group.classList.toggle('improv-scale', improvScale);
       node.group.classList.toggle('improv-root', improvRoot);
       node.group.classList.toggle('pattern-start', patternStart);
+      for (const cls of MARK_CLASSES) node.group.classList.remove(cls);
+      if (mark) node.group.classList.add(`mark-${mark.style ?? 'primary'}`);
+      // A mark can relabel its dot; everything else shows the note name.
+      const label = mark?.label ?? noteName(node.midi, false);
+      if (node.label.textContent !== label) node.label.textContent = label;
     }
   }
 
@@ -318,11 +364,31 @@ export class Fretboard {
     this.update();
   }
 
+  /**
+   * Show a set of annotated spots (mode 'marks'), or clear with null. This is
+   * the general-purpose overlay: anything that needs to point at places on the
+   * neck uses it instead of growing another display mode.
+   */
+  setMarks(marks: Mark[] | null, showRest = false): void {
+    this.marks = new Map((marks ?? []).map((m) => [spotKey(m.string, m.fret), m]));
+    this.marksShowRest = showRest;
+    this.update();
+  }
+
   /** Show exact string/fret spots (mode 'pattern'), or clear with null. */
   setPattern(spec: PatternSpec | null): void {
     this.pattern = spec;
     this.patternSpots = new Set(spec?.notes.map((n) => spotKey(n.string, n.fret)) ?? []);
     this.update();
+  }
+
+  /**
+   * Be told which spot was clicked. Returns an unsubscribe. Listeners survive
+   * a re-render, so changing tuning or neck length does not drop them.
+   */
+  onNoteSelect(listener: (spot: { string: number; fret: number; midi: number }) => void): () => void {
+    this.selectListeners.add(listener);
+    return () => void this.selectListeners.delete(listener);
   }
 
   setTuning(tuning: Tuning): void {

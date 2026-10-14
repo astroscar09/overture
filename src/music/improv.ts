@@ -1,5 +1,5 @@
 import { pitchClass, type PitchClass } from './notes';
-import { SCALES, scalePitchClasses } from './scales';
+import { SCALES, scalePitchClasses, scaleSpots } from './scales';
 import { chordFor, type Quality } from './chordShapes';
 import { KEY_NAMES, noteNameInKey } from './threeNps';
 import type { ProgressionStep } from '../trainer/ChordTrainer';
@@ -61,7 +61,7 @@ export function progressionSteps(
   }));
 }
 
-/** Every scale note on every string between two frets (inclusive). */
+/** The key's scale notes inside a fret window. */
 export function rangeNotes(
   keyPc: PitchClass,
   tonality: Tonality,
@@ -69,12 +69,5 @@ export function rangeNotes(
   fromFret: number,
   toFret: number,
 ): { string: number; fret: number }[] {
-  const scale = improvScale(keyPc, tonality);
-  const notes: { string: number; fret: number }[] = [];
-  openMidi.forEach((open, string) => {
-    for (let fret = fromFret; fret <= toFret; fret++) {
-      if (scale.has(pitchClass(open + fret))) notes.push({ string, fret });
-    }
-  });
-  return notes;
+  return scaleSpots(keyPc, tonality === 'major' ? SCALES.major : SCALES.minor, openMidi, fromFret, toFret);
 }

@@ -1,24 +1,64 @@
 :root {
-  --bg: #14171c;
-  --panel: #1c2129;
-  --panel-2: #242b35;
-  --text: #e7ecf3;
-  --muted: #8b96a5;
-  --line: #333d4a;
-  --accent: #f2a04d;
-  --accent-2: #4dd0e1;
-  --node: #3a4653;
-  --node-in-scale: #4dd0e1;
-  --node-root: #f2a04d;
-  /* Chord-tone highlight colours, by interval role. */
-  --tone-root: #f2a04d;
-  --tone-3: #6db8ff;
-  --tone-5: #7cd992;
-  --tone-7: #d98cff;
-  /* Two-chord improv view colours. */
-  --improv-a: #f2a04d;
-  --improv-b: #4dd0e1;
-  --improv-shared: #c07bff;
+  /* Ground. The page is deliberately flat and quiet: the neck is the only
+     warm, detailed object in the app, and everything else stays out of its way. */
+  --board: #0e1013;
+  --bg: var(--board);
+  --panel: #16191e;
+  --panel-2: #1c2027;
+  --line: #262b33;
+  --line-strong: #3a434f;
+
+  /* Ink. */
+  --text: #eef1f5;
+  --muted: #8b94a3;
+
+  /* Two hues, and only two. Amber and ice sit at opposite ends of the
+     blue–yellow axis, the one axis red-green colour vision leaves intact
+     (measured: they stay ~110 dE apart under protan and deutan simulation,
+     where the old blue/purple pair collapsed to 5). Anything needing more
+     than two categories splits them by filled vs hollow — never by adding a
+     third hue. */
+  --amber: #f5a524;
+  --amber-edge: #b4740f;
+  --ice: #4cc2ff;
+  --ice-edge: #1f7fb0;
+  --accent: var(--amber);
+  --accent-2: var(--ice);
+  /* Ink for text sitting on top of a filled amber/ice shape. */
+  --on-amber: #1a1205;
+  --on-ice: #04202e;
+
+  /* The fretboard: the one rich surface. */
+  --rosewood-top: #2b211a;
+  --rosewood-bottom: #1b1612;
+  --fret-wire: #8d96a3;
+  --string: #c3cad4;
+  --inlay: #5d6675;
+
+  /* Fretboard note nodes. */
+  --node: #333b46;
+  --node-in-scale: var(--ice);
+  --node-root: var(--amber);
+
+  /* Chord-tone roles. Hue separates root/7th (amber) from 3rd/5th (ice);
+     fill separates root/3rd (solid) from 5th/7th (hollow). Every one of the
+     six pairings differs by hue, by fill, or by both. */
+  --tone-root: var(--amber);
+  --tone-3: var(--ice);
+  --tone-5: var(--ice);
+  --tone-7: var(--amber);
+
+  /* Two-chord improv overlay: a shared tone wears both colours rather than
+     taking a third. */
+  --improv-a: var(--amber);
+  --improv-b: var(--ice);
+  --improv-shared: var(--ice);
+
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Mono is for live numeric readouts only — a tempo, a stopwatch, a fret
+     number. It is an instrument display, not a label style. */
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
   color-scheme: dark;
 }
 
@@ -28,40 +68,86 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
   background: var(--bg);
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Live numeric readouts: tabular so the digits never reflow as they tick. */
+.stopwatch,
+.bpm-input,
+.countdown,
+.key-time,
+.fret-number {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Everything settles instantly for anyone who asks for less movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 #app {
-  max-width: 1180px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 24px 20px 48px;
+  padding: 0 24px 64px;
 }
 
+/* The transport stays under your hand: it is the one control you reach for
+   mid-phrase, so it rides along at the top instead of scrolling away. Solid
+   background rather than a blur — a blurred sticky layer repaints on every
+   scrolled frame, and this app has a stopwatch running at 60fps underneath. */
+#top-rail {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 28px;
+  padding: 12px 0 11px;
+  margin-bottom: 22px;
+  background: var(--board);
+  border-bottom: 1px solid var(--line);
+}
+#top-rail #transport {
+  flex: 1 1 auto;
+}
+/* On a phone the transport wraps to several rows, and a sticky block that tall
+   would eat the screen — so it only rides along where it fits in one line. */
+@media (max-width: 860px) {
+  #top-rail {
+    position: static;
+  }
+}
 #app-header h1 {
   margin: 0;
-  font-size: 26px;
-  letter-spacing: 0.5px;
-}
-#app-header .tagline {
-  margin: 2px 0 20px;
-  color: var(--muted);
-  font-size: 14px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 main {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
 }
 
 /* ---- Fretboard ---- */
 #fretboard-panel {
-  background: linear-gradient(180deg, #2a2018, #1f1913);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px;
+  background: linear-gradient(176deg, var(--rosewood-top), var(--rosewood-bottom));
+  border: 1px solid #332820;
+  border-radius: 4px;
+  padding: 18px 18px 10px;
   overflow-x: hidden;
 }
 
@@ -73,25 +159,30 @@ svg.fretboard {
   height: auto;
 }
 
+/* Nickel fret wire, a bone nut, and strings that taper toward the low E —
+   the geometry of the instrument carries the detail here. */
 .fret-wire {
-  stroke: #5a6472;
-  stroke-width: 2;
+  stroke: var(--fret-wire);
+  stroke-width: 1.5;
+  opacity: 0.75;
 }
 .nut {
-  stroke: #d8dee7;
+  stroke: #e6e9ee;
   stroke-width: 6;
   stroke-linecap: round;
 }
 .string {
-  stroke: #b9c0cb;
+  stroke: var(--string);
+  opacity: 0.85;
 }
+/* Pearl position dots, set into the board rather than printed on it. */
 .inlay {
-  fill: #6b7688;
-  opacity: 0.5;
+  fill: #cdc3b2;
+  opacity: 0.38;
 }
 .fret-number {
-  fill: var(--muted);
-  font-size: 11px;
+  fill: #b0a699;
+  font-size: 10px;
   text-anchor: middle;
 }
 
@@ -104,7 +195,7 @@ svg.fretboard {
 }
 .fret-node {
   fill: var(--node);
-  stroke: #5b6675;
+  stroke: #525c69;
   stroke-width: 1;
   transition: transform 0.12s ease, fill 0.12s ease;
   transform-box: fill-box;
@@ -121,65 +212,81 @@ svg.fretboard {
 }
 .note.in-scale .fret-node {
   fill: var(--node-in-scale);
-  stroke: #2aa5b5;
+  stroke: var(--ice-edge);
 }
 .note.in-scale .note-label {
-  fill: #06232a;
+  fill: var(--on-ice);
 }
 .note.root .fret-node {
   fill: var(--node-root);
-  stroke: #c67f2f;
+  stroke: var(--amber-edge);
 }
 .note.root .note-label {
-  fill: #2b1a05;
+  fill: var(--on-amber);
 }
 .note.chord .fret-node {
-  fill: #7cd992;
-  stroke: #47a862;
+  fill: var(--ice);
+  stroke: var(--ice-edge);
 }
 .note.chord .note-label {
-  fill: #0c2413;
+  fill: var(--on-ice);
 }
-/* Chord-tone highlight: colour each node by its interval role. */
+/* Chord-tone highlight. Four roles out of two hues: the root and the 7th are
+   amber, the 3rd and the 5th ice; the root and the 3rd are solid, the 5th and
+   the 7th hollow. Every pair therefore differs by hue, by fill, or by both,
+   so none of it rests on telling two colours apart. */
 .note.tone-root .fret-node {
   fill: var(--tone-root);
-  stroke: #c67f2f;
+  stroke: var(--amber-edge);
 }
 .note.tone-3 .fret-node {
   fill: var(--tone-3);
-  stroke: #2f7ec6;
+  stroke: var(--ice-edge);
 }
 .note.tone-5 .fret-node {
-  fill: var(--tone-5);
-  stroke: #47a862;
+  fill: var(--board);
+  stroke: var(--tone-5);
+  stroke-width: 2.5;
 }
 .note.tone-7 .fret-node {
-  fill: var(--tone-7);
-  stroke: #a355c6;
+  fill: var(--board);
+  stroke: var(--tone-7);
+  stroke-width: 2.5;
 }
-.note.tone-root .note-label,
-.note.tone-3 .note-label,
-.note.tone-5 .note-label,
+.note.tone-root .note-label {
+  fill: var(--on-amber);
+}
+.note.tone-3 .note-label {
+  fill: var(--on-ice);
+}
+.note.tone-5 .note-label {
+  fill: var(--tone-5);
+}
 .note.tone-7 .note-label {
-  fill: #10161f;
+  fill: var(--tone-7);
 }
 /* Two-chord improv: chord A / chord B / shared tones, dim scale background. */
 .note.improv-a .fret-node {
   fill: var(--improv-a);
-  stroke: #c67f2f;
+  stroke: var(--amber-edge);
 }
 .note.improv-b .fret-node {
   fill: var(--improv-b);
-  stroke: #2aa5b5;
+  stroke: var(--ice-edge);
 }
+/* A note in both chords wears both colours — an ice centre inside an amber
+   ring — rather than taking a third hue that would have to be told apart. */
 .note.improv-shared .fret-node {
   fill: var(--improv-shared);
-  stroke: #8a4fd0;
+  stroke: var(--amber);
+  stroke-width: 4;
 }
-.note.improv-a .note-label,
+.note.improv-a .note-label {
+  fill: var(--on-amber);
+}
 .note.improv-b .note-label,
 .note.improv-shared .note-label {
-  fill: #10161f;
+  fill: var(--on-ice);
 }
 .note.improv-scale,
 .note.chord-scale {
@@ -188,7 +295,7 @@ svg.fretboard {
 .note.improv-scale .fret-node,
 .note.chord-scale .fret-node {
   fill: var(--node);
-  stroke: #4a5563;
+  stroke: #454e5b;
 }
 /* Root of either chord gets a bright ring on top of its fill. */
 .note.improv-root .fret-node {
@@ -223,40 +330,52 @@ svg.fretboard {
 .tab-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 26px;
+  border-bottom: 1px solid var(--line);
 }
 .tab {
-  background: var(--panel);
+  position: relative;
+  background: none;
   color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 10px 20px;
+  border: 0;
+  border-radius: 0;
+  padding: 2px 0 11px;
+  font-family: inherit;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
-  transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  transition: color 0.12s ease;
 }
 .tab:hover {
   color: var(--text);
-  border-color: var(--accent-2);
 }
 .tab.active {
-  color: #05242a;
-  background: var(--accent-2);
-  border-color: transparent;
+  color: var(--text);
+}
+/* The marker under the live tab is the nut: one heavy line where the neck starts. */
+.tab.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--amber);
 }
 .tab-panel {
   width: 100%;
 }
+/* Content sits on the page rather than inside a stack of identical cards —
+   the rules below separate it the way fret wires divide the neck. */
 .group {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px 16px;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 18px 0 0;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 14px;
+  gap: 16px;
   flex: 1 1 auto;
 }
 
@@ -266,9 +385,8 @@ svg.fretboard {
   gap: 5px;
 }
 .field-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  font-size: 12px;
+  font-weight: 400;
   color: var(--muted);
 }
 
@@ -276,7 +394,8 @@ svg.fretboard {
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
+  font-family: inherit;
   padding: 9px 16px;
   font-size: 14px;
   font-weight: 600;
@@ -286,19 +405,20 @@ svg.fretboard {
 .btn:hover {
   border-color: var(--accent-2);
 }
+/* Idle reads cool, running reads lit — the pilot lamp coming on. */
 .btn.primary {
   background: var(--accent-2);
-  color: #05242a;
+  color: var(--on-ice);
   border-color: transparent;
   min-width: 92px;
 }
 .btn.primary.is-running {
   background: var(--accent);
-  color: #2b1a05;
+  color: var(--on-amber);
 }
 .btn.flash {
   border-color: var(--accent);
-  background: #3a2f22;
+  background: #332616;
 }
 .btn:disabled {
   opacity: 0.4;
@@ -310,7 +430,8 @@ svg.fretboard {
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
+  font-family: inherit;
   padding: 8px 10px;
   font-size: 14px;
 }
@@ -337,7 +458,7 @@ svg.fretboard {
   background: var(--panel-2);
   color: var(--accent-2);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 8px 10px;
   font-size: 20px;
   font-weight: 700;
@@ -392,18 +513,21 @@ svg.fretboard {
 }
 .chord-legend .swatch::before {
   content: "";
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
   background: var(--node);
+  box-sizing: border-box;
 }
+/* Each key mirrors the node it stands for, hollow ones included, so the
+   legend reads as the same object rather than an abstract colour chip. */
 .chord-legend .swatch.tone-root::before { background: var(--tone-root); }
 .chord-legend .swatch.tone-3::before { background: var(--tone-3); }
-.chord-legend .swatch.tone-5::before { background: var(--tone-5); }
-.chord-legend .swatch.tone-7::before { background: var(--tone-7); }
+.chord-legend .swatch.tone-5::before { background: var(--board); border: 2.5px solid var(--tone-5); }
+.chord-legend .swatch.tone-7::before { background: var(--board); border: 2.5px solid var(--tone-7); }
 .chord-legend .swatch.improv-a::before { background: var(--improv-a); }
 .chord-legend .swatch.improv-b::before { background: var(--improv-b); }
-.chord-legend .swatch.improv-shared::before { background: var(--improv-shared); }
+.chord-legend .swatch.improv-shared::before { background: var(--improv-shared); border: 3px solid var(--amber); }
 .chord-legend .swatch.improv-scale::before { background: var(--node); opacity: 0.55; }
 
 /* Two-chord improv controls. */
@@ -440,7 +564,7 @@ svg.fretboard {
 #chord-panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 16px;
 }
 .chord-trainer {
@@ -463,9 +587,7 @@ svg.fretboard {
   gap: 8px;
 }
 .slot-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-size: 12px;
   color: var(--muted);
 }
 .chord-slot.now .slot-label {
@@ -531,21 +653,21 @@ svg.fretboard {
 /* ---- Chord diagram SVG ---- */
 .cd-fret,
 .cd-string {
-  stroke: #9aa4b2;
+  stroke: #79828f;
   stroke-width: 1.2;
 }
 .cd-nut {
-  stroke: #e7ecf3;
+  stroke: var(--text);
   stroke-width: 3.5;
 }
 .cd-dot {
   fill: var(--accent-2);
 }
 .chord-slot.next .cd-dot {
-  fill: #8b96a5;
+  fill: var(--muted);
 }
 .cd-finger {
-  fill: #05242a;
+  fill: var(--on-ice);
   font-size: 10px;
   font-weight: 700;
   text-anchor: middle;
@@ -629,9 +751,14 @@ svg.fretboard {
 .transport-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
-  align-items: flex-end;
+  gap: 10px 22px;
+  align-items: center;
   width: 100%;
+}
+#top-rail .transport-row .field {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 .transport-start {
   display: flex;
@@ -675,15 +802,17 @@ svg.fretboard {
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 8px 10px;
   font-size: 14px;
 }
 .grid-hint {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.55;
   margin: 10px 0;
   flex-basis: 100%;
+  max-width: 68ch;
 }
 .bars-grid {
   display: flex;
@@ -695,7 +824,7 @@ svg.fretboard {
 .bar {
   background: var(--panel-2);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 6px;
   padding: 8px;
   min-width: 104px;
   display: flex;
@@ -777,7 +906,7 @@ svg.fretboard {
   background: none;
   border: 1px dashed var(--line);
   color: var(--muted);
-  border-radius: 10px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
@@ -827,7 +956,7 @@ svg.fretboard {
   padding: 6px 4px;
   background: var(--panel-2);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
 }
 .key-num {
   font-size: 10px;
@@ -870,8 +999,9 @@ svg.fretboard {
 }
 .now-key {
   font-size: 28px;
-  font-weight: 700;
-  color: var(--accent-2);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
 .now-detail {
   margin-top: 2px;
@@ -884,11 +1014,11 @@ svg.fretboard {
   gap: 14px;
 }
 .stopwatch {
-  min-width: 130px;
-  font-size: 34px;
-  font-weight: 700;
+  min-width: 134px;
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 .position-row {
   display: flex;
@@ -907,7 +1037,7 @@ svg.fretboard {
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -917,7 +1047,7 @@ svg.fretboard {
 }
 .chip.active {
   background: var(--accent-2);
-  color: #05242a;
+  color: var(--on-ice);
   border-color: transparent;
 }
 .practice-summary,
@@ -944,10 +1074,8 @@ svg.fretboard {
   border-bottom: 1px solid var(--line);
 }
 .summary-table th {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--muted);
 }
 .history-list {
@@ -973,10 +1101,10 @@ svg.fretboard {
 /* ---- Note-naming drills (note finder · key targets) ---- */
 .drill-note {
   font-size: 44px;
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--accent-2);
-  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  color: var(--text);
 }
 .drill-answer {
   margin-top: 4px;
@@ -1019,4 +1147,599 @@ svg.fretboard {
   gap: 4px 14px;
   align-items: center;
   padding: 7px 0;
+}
+
+/* ---- Circle of fifths routine ---- */
+.circle-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+.circle-now {
+  flex: 1 1 220px;
+}
+.next-key {
+  margin-top: 6px;
+}
+.next-key.cue {
+  color: var(--accent);
+  font-weight: 700;
+}
+svg.circle-wheel {
+  flex: 0 0 auto;
+}
+.wheel-ring {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.wheel-node {
+  fill: var(--panel-2);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.wheel-label {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+  user-select: none;
+}
+.wheel-key.done .wheel-node {
+  fill: #2d3a46;
+  stroke: #46566a;
+}
+.wheel-key.done .wheel-label {
+  fill: var(--text);
+}
+.wheel-key.next .wheel-node {
+  fill: var(--panel-2);
+  stroke: var(--accent-2);
+  stroke-width: 2;
+}
+.wheel-key.next .wheel-label {
+  fill: var(--accent-2);
+}
+.wheel-key.current .wheel-node {
+  fill: var(--accent);
+  stroke: transparent;
+}
+.wheel-key.current .wheel-label {
+  fill: var(--on-amber);
+  font-size: 13px;
+  font-weight: 700;
+}
+.wheel-centre-glyph {
+  fill: var(--muted);
+  font-size: 20px;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.wheel-centre-text {
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+/* ---- Fretboard marks (Theory Lab, ear training, technique) ---- */
+/* Shape does as much work as colour: filled vs hollow vs dashed stays legible
+   whatever the viewer's colour vision. */
+.note.mark-primary .fret-node {
+  fill: var(--amber);
+  stroke: var(--amber-edge);
+}
+.note.mark-primary .note-label {
+  fill: var(--on-amber);
+}
+.note.mark-secondary .fret-node {
+  fill: var(--ice);
+  stroke: var(--ice-edge);
+}
+.note.mark-secondary .note-label {
+  fill: var(--on-ice);
+}
+.note.mark-ghost .fret-node {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+}
+.note.mark-ghost .note-label {
+  fill: var(--muted);
+}
+/* "Find this one": an empty socket waiting to be filled. */
+.note.mark-target .fret-node {
+  fill: var(--board);
+  stroke: var(--ice);
+  stroke-width: 2.5;
+  stroke-dasharray: 3 2.5;
+}
+.note.mark-target .note-label {
+  fill: var(--ice);
+}
+.note.mark-correct .fret-node {
+  fill: var(--amber);
+  stroke: var(--text);
+  stroke-width: 2.5;
+}
+.note.mark-correct .note-label {
+  fill: var(--on-amber);
+}
+/* Wrong is hollow and faded — never a red dot, which would vanish next to
+   the amber for a red-green eye. */
+.note.mark-wrong .fret-node {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-dasharray: 2 3;
+}
+.note.mark-wrong .note-label {
+  fill: var(--muted);
+}
+
+/* ---- Theory Lab ---- */
+.theory-group {
+  gap: 14px;
+}
+.theory-question {
+  width: 100%;
+  padding-top: 4px;
+}
+.theory-prompt {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  max-width: 34ch;
+}
+.theory-answer {
+  margin-top: 16px;
+  width: 100%;
+}
+.theory-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.theory-choice {
+  padding: 11px 18px;
+  min-width: 90px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.theory-choice:hover:not(:disabled) {
+  border-color: var(--accent-2);
+}
+.theory-choice.picked {
+  border-color: var(--accent-2);
+  background: #15262f;
+}
+/* After checking: the right answer is filled, a wrong pick is struck through.
+   Shape and weight carry it, not hue alone. */
+.theory-choice.is-answer {
+  background: var(--amber);
+  border-color: transparent;
+  color: var(--on-amber);
+  opacity: 1;
+}
+.theory-choice.is-wrong {
+  border-color: var(--muted);
+  border-style: dashed;
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.theory-choice:disabled {
+  cursor: default;
+}
+
+.theory-sequence,
+.theory-pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 40px;
+  align-items: center;
+}
+.theory-sequence {
+  padding: 8px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+.theory-chip {
+  padding: 8px 14px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.theory-chip:hover:not(:disabled) {
+  border-color: var(--accent-2);
+}
+.theory-chip.used {
+  opacity: 0.3;
+  cursor: default;
+}
+.theory-placeholder {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.theory-feedback {
+  width: 100%;
+  padding: 14px 16px;
+  border-left: 2px solid var(--muted);
+  background: var(--panel);
+  border-radius: 0 6px 6px 0;
+}
+.theory-feedback.is-correct {
+  border-left-color: var(--amber);
+}
+.theory-verdict {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.theory-feedback.is-correct .theory-verdict {
+  color: var(--amber);
+}
+.theory-rationale {
+  font-size: 14px;
+  line-height: 1.55;
+  max-width: 68ch;
+}
+.theory-diagnosis {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+  max-width: 68ch;
+}
+/* The tier line and the session tally are separate thoughts: one per row. */
+.theory-group .drill-stats,
+.theory-group .grid-hint {
+  flex-basis: 100%;
+}
+
+/* ---- Tab notation ---- */
+.tab-holder {
+  width: 100%;
+  overflow-x: auto;
+  padding: 6px 0 2px;
+}
+/* Drawn at its natural size and scrolled, never stretched — stretching a
+   stave to the page width makes a one-bar exercise look like a poster. */
+svg.tab {
+  display: block;
+  width: auto;
+  height: auto;
+}
+.tab-line {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+.tab-clef {
+  fill: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.tab-barline {
+  stroke: var(--line-strong);
+  stroke-width: 1.5;
+}
+.tab-barline-end {
+  stroke: var(--text);
+  stroke-width: 2.5;
+}
+.tab-stem,
+.tab-beam {
+  stroke: var(--muted);
+  fill: var(--muted);
+  stroke-width: 1.2;
+}
+.tab-beam {
+  stroke: none;
+}
+.tab-note-bg {
+  fill: var(--board);
+}
+.tab-fret {
+  fill: var(--text);
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+/* The note sounding right now. */
+.tab-note.playing .tab-note-bg {
+  fill: var(--amber);
+}
+.tab-note.playing .tab-fret {
+  fill: var(--on-amber);
+  font-weight: 600;
+}
+.tab-slur {
+  fill: none;
+  stroke: var(--ice);
+  stroke-width: 1.3;
+}
+.tab-articulation {
+  fill: var(--ice);
+  font-size: 10px;
+  font-style: italic;
+  text-anchor: middle;
+}
+.tab-tuplet {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+.tab-tuplet-number {
+  fill: var(--muted);
+  font-size: 10px;
+  text-anchor: middle;
+}
+.tab-bend {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 1.4;
+}
+.tab-bend-tip {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 1.4;
+}
+.tab-bend-label {
+  fill: var(--amber);
+  font-size: 9px;
+  font-weight: 600;
+}
+.technique-group .grid-hint,
+.technique-group .drill-stats {
+  flex-basis: 100%;
+}
+.theory-fretboard-answer {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* ---- Ear training: practise / explore ---- */
+.mode-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+  flex-basis: 100%;
+}
+.mode-tab {
+  padding: 7px 14px;
+  background: none;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.mode-tab:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+.mode-tab.active {
+  color: var(--on-ice);
+  background: var(--accent-2);
+  border-color: transparent;
+}
+.ear-panel {
+  display: contents;
+}
+.explorer {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+.interval-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.interval-chip {
+  padding: 8px 13px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.interval-chip:hover {
+  border-color: var(--accent-2);
+}
+.interval-chip.active {
+  background: var(--amber);
+  color: var(--on-amber);
+  border-color: transparent;
+  font-weight: 600;
+}
+.interval-blurb {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 68ch;
+}
+
+/* ---- Progress dashboard ---- */
+.progress-group {
+  gap: 26px;
+}
+.progress-headline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 34px;
+  flex-basis: 100%;
+}
+.stat-value {
+  font-family: var(--mono);
+  font-size: 30px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.progress-block {
+  flex-basis: 100%;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.progress-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.progress-note {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 68ch;
+  margin-bottom: 10px;
+}
+.goal-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+}
+.goal-label {
+  min-width: 150px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.goal-track {
+  flex: 1 1 auto;
+  max-width: 420px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+.goal-fill {
+  height: 100%;
+  background: var(--line-strong);
+  transition: width 0.2s ease;
+}
+.goal-fill.met {
+  background: var(--amber);
+}
+
+/* ---- Charts ---- */
+.chart-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  flex-basis: 100%;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.chart-card {
+  flex: 1 1 380px;
+  min-width: 0;
+}
+svg.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 4px;
+}
+/* Recessive: the data is the thing, the frame is not. */
+.chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.chart-axis {
+  fill: var(--muted);
+  font-size: 10px;
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+}
+.chart-axis-y {
+  text-anchor: end;
+}
+.chart-bar {
+  fill: #c08214;
+}
+.chart-line {
+  fill: none;
+  stroke: #2a8fc8;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+/* A ring in the surface colour, not a border, so overlapping dots stay legible. */
+.chart-dot {
+  fill: #2a8fc8;
+  stroke: var(--board);
+  stroke-width: 2;
+}
+.chart-hit {
+  fill: transparent;
+}
+.chart-hit:hover {
+  fill: var(--panel-2);
+  opacity: 0.45;
+}
+
+/* ---- Review queue ---- */
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.review-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.review-item:last-child {
+  border-bottom: 0;
+}
+.review-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+.review-reason {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 2px;
 }

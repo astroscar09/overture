@@ -14,6 +14,7 @@ export const LOG_KEYS = {
   improv: 'overture.practice.improv.history',
   noteFinder: 'overture.practice.noteFinder.history',
   chordTones: 'overture.practice.chordTones.history',
+  circle: 'overture.practice.circle.history',
 } as const;
 
 export type LogName = keyof typeof LOG_KEYS;

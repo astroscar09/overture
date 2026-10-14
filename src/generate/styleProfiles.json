@@ -1,0 +1,607 @@
+{
+  "generatedAt": "2026-10-10T13:47:05+00:00",
+  "note": "Aggregate phrasing statistics measured from Guitar Pro transcriptions. Numbers only \u2014 no musical content, and no reference to the source files.",
+  "profiles": {
+    "blues-rock": {
+      "notes": 416,
+      "bars": 71,
+      "passages": 3,
+      "notesPerBar": 7.153,
+      "intervals": {
+        "repeatRate": 0.095,
+        "stepwiseRate": 0.545,
+        "leapRate": 0.213,
+        "histogram": {
+          "3": 0.2825,
+          "2": 0.2324,
+          "4": 0.1474,
+          "5": 0.1258,
+          "0": 0.0947,
+          "8": 0.0315,
+          "1": 0.0293,
+          "7": 0.0193,
+          "12": 0.0143,
+          "9": 0.012,
+          "6": 0.005,
+          "10": 0.0048
+        }
+      },
+      "contour": {
+        "notesPerReversal": 1.777,
+        "medianRun": 1.558,
+        "maxRun": 5
+      },
+      "rhythm": {
+        "dominantShare": 0.74,
+        "histogram": {
+          "60": 0.4952,
+          "120": 0.3461,
+          "240": 0.084,
+          "360": 0.0383,
+          "160": 0.0192,
+          "480": 0.0146,
+          "720": 0.0024
+        }
+      },
+      "bends": {
+        "rate": 0.058,
+        "medianSemitones": 2.0,
+        "wholeStepShare": 0.977
+      },
+      "hand": {
+        "medianSpan": 2.858,
+        "p90Span": 3.743,
+        "maxSpan": 9
+      },
+      "strings": {
+        "topThreeShare": 0.925,
+        "sameStringRate": 0.555,
+        "distribution": {
+          "1": 0.4088,
+          "2": 0.2909,
+          "3": 0.2258,
+          "4": 0.0576,
+          "5": 0.0169
+        }
+      },
+      "position": {
+        "medianFret": 9.822,
+        "highFret": 15,
+        "lowFret": 1
+      },
+      "tonality": {
+        "coreFiveShare": 0.846,
+        "chromaticRate": 0.022,
+        "distinctPitchClasses": 8.043
+      },
+      "phraseEnds": {
+        "onCoreFive": 0.86
+      },
+      "technique": {
+        "hammer": 0.166,
+        "bend": 0.058,
+        "vibrato": 0.041,
+        "slides": 0.031,
+        "palmMute": 0.0,
+        "letRing": 0.0,
+        "staccato": 0.0,
+        "ghostNote": 0.0
+      },
+      "likelyScales": {
+        "share": 0.142,
+        "mix": {
+          "major pentatonic": 1.0
+        }
+      }
+    },
+    "classic-rock": {
+      "notes": 474,
+      "bars": 46,
+      "passages": 3,
+      "notesPerBar": 10.942,
+      "intervals": {
+        "repeatRate": 0.036,
+        "stepwiseRate": 0.331,
+        "leapRate": 0.445,
+        "histogram": {
+          "3": 0.2609,
+          "4": 0.1868,
+          "7": 0.1399,
+          "5": 0.1398,
+          "2": 0.0684,
+          "8": 0.0612,
+          "9": 0.0572,
+          "0": 0.0362,
+          "6": 0.0211,
+          "10": 0.0127,
+          "12": 0.0085,
+          "11": 0.0041,
+          "1": 0.002
+        }
+      },
+      "contour": {
+        "notesPerReversal": 1.661,
+        "medianRun": 1.095,
+        "maxRun": 9
+      },
+      "rhythm": {
+        "dominantShare": 0.832,
+        "histogram": {
+          "60": 0.8188,
+          "120": 0.1227,
+          "480": 0.034,
+          "240": 0.0148,
+          "180": 0.0063,
+          "720": 0.0042
+        }
+      },
+      "bends": {
+        "rate": 0.03,
+        "medianSemitones": 2.0,
+        "wholeStepShare": 0.857
+      },
+      "hand": {
+        "medianSpan": 3.81,
+        "p90Span": 8.0,
+        "maxSpan": 13
+      },
+      "strings": {
+        "topThreeShare": 0.922,
+        "sameStringRate": 0.451,
+        "distribution": {
+          "1": 0.6136,
+          "2": 0.2514,
+          "3": 0.057,
+          "4": 0.0359,
+          "5": 0.0359,
+          "6": 0.0063
+        }
+      },
+      "position": {
+        "medianFret": 8.152,
+        "highFret": 20,
+        "lowFret": 2
+      },
+      "tonality": {
+        "coreFiveShare": 0.774,
+        "chromaticRate": 0.072,
+        "distinctPitchClasses": 8.43
+      },
+      "phraseEnds": {
+        "onCoreFive": 0.835
+      },
+      "technique": {
+        "hammer": 0.07,
+        "vibrato": 0.049,
+        "bend": 0.03,
+        "slides": 0.015,
+        "staccato": 0.006,
+        "ghostNote": 0.004,
+        "palmMute": 0.0,
+        "letRing": 0.0
+      },
+      "likelyScales": {
+        "share": 1.0,
+        "mix": {
+          "aeolian": 0.81,
+          "minor pentatonic": 0.19
+        }
+      }
+    },
+    "grunge": {
+      "notes": 345,
+      "bars": 31,
+      "passages": 3,
+      "notesPerBar": 11.264,
+      "intervals": {
+        "repeatRate": 0.219,
+        "stepwiseRate": 0.673,
+        "leapRate": 0.103,
+        "histogram": {
+          "2": 0.43,
+          "3": 0.2308,
+          "0": 0.2191,
+          "5": 0.0497,
+          "7": 0.035,
+          "1": 0.0117,
+          "4": 0.0057,
+          "8": 0.0057,
+          "10": 0.0057,
+          "12": 0.0057
+        }
+      },
+      "contour": {
+        "notesPerReversal": 1.693,
+        "medianRun": 1.0,
+        "maxRun": 5
+      },
+      "rhythm": {
+        "dominantShare": 0.698,
+        "histogram": {
+          "60": 0.6983,
+          "120": 0.1073,
+          "40": 0.0667,
+          "30": 0.0493,
+          "240": 0.0291,
+          "180": 0.0231,
+          "360": 0.0117,
+          "80": 0.0087,
+          "90": 0.0028,
+          "720": 0.0028
+        }
+      },
+      "bends": {
+        "rate": 0.177,
+        "medianSemitones": 2.0,
+        "wholeStepShare": 0.946
+      },
+      "hand": {
+        "medianSpan": 2.649,
+        "p90Span": 4.243,
+        "maxSpan": 13
+      },
+      "strings": {
+        "topThreeShare": 0.916,
+        "sameStringRate": 0.591,
+        "distribution": {
+          "3": 0.3102,
+          "2": 0.3101,
+          "1": 0.2957,
+          "4": 0.0434,
+          "5": 0.0319,
+          "6": 0.0088
+        }
+      },
+      "position": {
+        "medianFret": 12.119,
+        "highFret": 18,
+        "lowFret": 2
+      },
+      "tonality": {
+        "coreFiveShare": 0.965,
+        "chromaticRate": 0.014,
+        "distinctPitchClasses": 6.414
+      },
+      "phraseEnds": {
+        "onCoreFive": 1.0
+      },
+      "technique": {
+        "bend": 0.177,
+        "hammer": 0.101,
+        "ghostNote": 0.064,
+        "vibrato": 0.035,
+        "slides": 0.012,
+        "palmMute": 0.0,
+        "letRing": 0.0,
+        "staccato": 0.0
+      },
+      "likelyScales": {
+        "share": 1.0,
+        "mix": {
+          "minor pentatonic": 1.0
+        }
+      }
+    },
+    "hard-rock": {
+      "notes": 1433,
+      "bars": 203,
+      "passages": 14,
+      "notesPerBar": 7.251,
+      "intervals": {
+        "repeatRate": 0.211,
+        "stepwiseRate": 0.616,
+        "leapRate": 0.132,
+        "histogram": {
+          "2": 0.2863,
+          "0": 0.2112,
+          "1": 0.1803,
+          "3": 0.1493,
+          "5": 0.0579,
+          "4": 0.0408,
+          "7": 0.0374,
+          "12": 0.0198,
+          "8": 0.0056,
+          "6": 0.0055,
+          "10": 0.0042,
+          "9": 0.0007,
+          "11": 0.0007
+        }
+      },
+      "contour": {
+        "notesPerReversal": 1.785,
+        "medianRun": 1.308,
+        "maxRun": 10
+      },
+      "rhythm": {
+        "dominantShare": 0.515,
+        "histogram": {
+          "60": 0.506,
+          "120": 0.1773,
+          "40": 0.092,
+          "240": 0.0518,
+          "80": 0.0405,
+          "48": 0.0314,
+          "30": 0.028,
+          "160": 0.0217,
+          "180": 0.014,
+          "360": 0.0118,
+          "480": 0.0104,
+          "720": 0.0062,
+          "90": 0.0042,
+          "20": 0.0035,
+          "960": 0.0014
+        }
+      },
+      "bends": {
+        "rate": 0.12,
+        "medianSemitones": 1.962,
+        "wholeStepShare": 0.84
+      },
+      "hand": {
+        "medianSpan": 2.654,
+        "p90Span": 4.912,
+        "maxSpan": 17
+      },
+      "strings": {
+        "topThreeShare": 0.838,
+        "sameStringRate": 0.697,
+        "distribution": {
+          "2": 0.3342,
+          "1": 0.2799,
+          "3": 0.2242,
+          "4": 0.0955,
+          "6": 0.0383,
+          "5": 0.0279
+        }
+      },
+      "position": {
+        "medianFret": 13.486,
+        "highFret": 22,
+        "lowFret": 1
+      },
+      "tonality": {
+        "coreFiveShare": 0.864,
+        "chromaticRate": 0.037,
+        "distinctPitchClasses": 8.745
+      },
+      "phraseEnds": {
+        "onCoreFive": 0.884
+      },
+      "technique": {
+        "bend": 0.12,
+        "hammer": 0.117,
+        "vibrato": 0.037,
+        "slides": 0.017,
+        "ghostNote": 0.015,
+        "staccato": 0.002,
+        "palmMute": 0.0,
+        "letRing": 0.0
+      },
+      "likelyScales": {
+        "share": 0.964,
+        "mix": {
+          "major": 0.382,
+          "minor pentatonic": 0.244,
+          "major pentatonic": 0.148,
+          "phrygian": 0.135,
+          "harmonic minor": 0.067,
+          "blues": 0.022
+        }
+      }
+    },
+    "metal": {
+      "notes": 3270,
+      "bars": 532,
+      "passages": 22,
+      "notesPerBar": 7.574,
+      "intervals": {
+        "repeatRate": 0.223,
+        "stepwiseRate": 0.518,
+        "leapRate": 0.212,
+        "histogram": {
+          "2": 0.2241,
+          "0": 0.223,
+          "1": 0.1877,
+          "3": 0.1059,
+          "12": 0.0813,
+          "5": 0.0574,
+          "4": 0.0476,
+          "7": 0.0257,
+          "6": 0.0195,
+          "8": 0.0172,
+          "9": 0.0071,
+          "10": 0.0028,
+          "11": 0.0013
+        }
+      },
+      "contour": {
+        "notesPerReversal": 2.188,
+        "medianRun": 1.44,
+        "maxRun": 15
+      },
+      "rhythm": {
+        "dominantShare": 0.575,
+        "histogram": {
+          "60": 0.2569,
+          "120": 0.2474,
+          "240": 0.2012,
+          "40": 0.1883,
+          "480": 0.0604,
+          "360": 0.0189,
+          "180": 0.0083,
+          "720": 0.0073,
+          "960": 0.0047,
+          "48": 0.0031,
+          "20": 0.0013,
+          "90": 0.0012,
+          "30": 0.0012
+        }
+      },
+      "bends": {
+        "rate": 0.05,
+        "medianSemitones": 1.181,
+        "wholeStepShare": 0.372
+      },
+      "hand": {
+        "medianSpan": 2.775,
+        "p90Span": 6.05,
+        "maxSpan": 20
+      },
+      "strings": {
+        "topThreeShare": 0.835,
+        "sameStringRate": 0.735,
+        "distribution": {
+          "2": 0.4269,
+          "3": 0.2116,
+          "1": 0.1969,
+          "4": 0.0999,
+          "5": 0.0362,
+          "6": 0.0284
+        }
+      },
+      "position": {
+        "medianFret": 12.591,
+        "highFret": 24,
+        "lowFret": 1
+      },
+      "tonality": {
+        "coreFiveShare": 0.824,
+        "chromaticRate": 0.071,
+        "distinctPitchClasses": 8.75
+      },
+      "phraseEnds": {
+        "onCoreFive": 0.778
+      },
+      "technique": {
+        "staccato": 0.072,
+        "vibrato": 0.052,
+        "bend": 0.05,
+        "hammer": 0.033,
+        "slides": 0.032,
+        "palmMute": 0.017,
+        "ghostNote": 0.001,
+        "letRing": 0.0
+      },
+      "likelyScales": {
+        "share": 0.893,
+        "mix": {
+          "aeolian": 0.308,
+          "major": 0.284,
+          "phrygian": 0.242,
+          "dorian": 0.071,
+          "blues": 0.063,
+          "harmonic minor": 0.033
+        }
+      }
+    },
+    "all": {
+      "notes": 5938,
+      "bars": 883,
+      "passages": 45,
+      "notesPerBar": 7.95,
+      "intervals": {
+        "repeatRate": 0.196,
+        "stepwiseRate": 0.537,
+        "leapRate": 0.205,
+        "histogram": {
+          "2": 0.2392,
+          "0": 0.196,
+          "1": 0.1498,
+          "3": 0.1484,
+          "5": 0.0684,
+          "4": 0.0616,
+          "12": 0.0516,
+          "7": 0.0377,
+          "8": 0.0183,
+          "6": 0.0141,
+          "9": 0.0095,
+          "10": 0.0042,
+          "11": 0.0012
+        }
+      },
+      "contour": {
+        "notesPerReversal": 1.991,
+        "medianRun": 1.363,
+        "maxRun": 15
+      },
+      "rhythm": {
+        "dominantShare": 0.599,
+        "histogram": {
+          "60": 0.4042,
+          "120": 0.2193,
+          "240": 0.132,
+          "40": 0.1298,
+          "480": 0.0395,
+          "360": 0.0166,
+          "30": 0.0103,
+          "80": 0.0103,
+          "180": 0.0098,
+          "48": 0.0093,
+          "160": 0.0066,
+          "720": 0.0062,
+          "960": 0.0029,
+          "90": 0.0019,
+          "20": 0.0015
+        }
+      },
+      "bends": {
+        "rate": 0.073,
+        "medianSemitones": 1.608,
+        "wholeStepShare": 0.646
+      },
+      "hand": {
+        "medianSpan": 2.827,
+        "p90Span": 5.665,
+        "maxSpan": 20
+      },
+      "strings": {
+        "topThreeShare": 0.854,
+        "sameStringRate": 0.682,
+        "distribution": {
+          "2": 0.3742,
+          "1": 0.2708,
+          "3": 0.209,
+          "4": 0.0875,
+          "5": 0.0326,
+          "6": 0.0259
+        }
+      },
+      "position": {
+        "medianFret": 12.231,
+        "highFret": 24,
+        "lowFret": 1
+      },
+      "tonality": {
+        "coreFiveShare": 0.839,
+        "chromaticRate": 0.056,
+        "distinctPitchClasses": 8.538
+      },
+      "phraseEnds": {
+        "onCoreFive": 0.827
+      },
+      "technique": {
+        "bend": 0.073,
+        "hammer": 0.069,
+        "vibrato": 0.046,
+        "staccato": 0.04,
+        "slides": 0.026,
+        "palmMute": 0.009,
+        "ghostNote": 0.008,
+        "letRing": 0.0
+      },
+      "likelyScales": {
+        "share": 0.872,
+        "mix": {
+          "major": 0.262,
+          "aeolian": 0.248,
+          "phrygian": 0.172,
+          "minor pentatonic": 0.149,
+          "major pentatonic": 0.051,
+          "blues": 0.042,
+          "dorian": 0.04,
+          "harmonic minor": 0.037
+        }
+      }
+    }
+  }
+}

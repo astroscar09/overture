@@ -1,3 +1,9 @@
+// Self-hosted so the app keeps its type offline and never waits on a font CDN.
+// Latin subsets only, and only the weights the UI actually uses.
+import '@fontsource/ibm-plex-sans/latin-400.css';
+import '@fontsource/ibm-plex-sans/latin-500.css';
+import '@fontsource/ibm-plex-sans/latin-600.css';
+import '@fontsource/ibm-plex-mono/latin-500.css';
 import './ui/styles.css';
 import { DEFAULT_FRETS, Fretboard } from './fretboard/Fretboard';
 import { Metronome } from './audio/metronome';
@@ -9,6 +15,7 @@ import { BackingTrack } from './audio/backing';
 import { playChord } from './audio/engine';
 import { chordNotes } from './music/chords';
 import { installLogConsoleApi } from './practice/history';
+import { createProgressLog } from './practice/progress';
 import { state } from './state';
 
 const transportEl = document.getElementById('transport');
@@ -28,6 +35,11 @@ fretboardPanel.before(chordPanelEl);
 
 // Lets the practice log be read from the browser console as `overture.read()`.
 installLogConsoleApi();
+
+// One append-only record of everything practised. Existing per-routine logs are
+// folded in once, so nothing recorded before today is lost.
+const progress = createProgressLog();
+progress.backfillFromRoutineLogs();
 
 const fretboard = new Fretboard(fretboardPanel, state.tuning, DEFAULT_FRETS);
 
@@ -53,4 +65,5 @@ createControls(controlsPanel, {
   chordPanelEl,
   transportEl,
   state,
+  progress,
 });
